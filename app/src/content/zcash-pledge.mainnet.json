@@ -32,5 +32,5 @@
   "indexer": "https://zec.rocks:443",
   "verifyCommand": "zingo-cli --chain mainnet --server https://zec.rocks:443 --viewkey <UFVK> --birthday <BIRTHDAY> --waitsync balance",
   "spendCheck": "No spend capability",
-  "published": false
+  "published": true
 }

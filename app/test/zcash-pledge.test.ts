@@ -69,10 +69,10 @@ const fakeMain: ZcashPledgeData = {
 };
 
 describe("Zcash mainnet pledge", () => {
-  it("loads the real mainnet snapshot, still unpublished", () => {
+  it("loads the real mainnet snapshot, published", () => {
     expect(ZCASH_BY_NET.mainnet).toBe(ZCASH_MAINNET);
     expect(ZCASH_BY_NET.testnet).toBe(ZCASH);
-    expect(ZCASH_MAINNET).toMatchObject({ networkId: "mainnet", network: "Zcash mainnet", unit: "ZEC", published: false, pool: "Ironwood" });
+    expect(ZCASH_MAINNET).toMatchObject({ networkId: "mainnet", network: "Zcash mainnet", unit: "ZEC", published: true, pool: "Ironwood" });
     expect(ZCASH_MAINNET.address).toMatch(/^u1[a-z0-9]+$/);
     expect(ZCASH_MAINNET.viewingKey).toMatch(/^uview1[a-z0-9]+$/);
     expect(ZCASH_MAINNET.birthdayHeight).toBe(3507500);
@@ -84,7 +84,7 @@ describe("Zcash mainnet pledge", () => {
   });
 
   it("renders no numbers while unpublished", () => {
-    const p = zcashPledge(ZCASH_MAINNET);
+    const p = zcashPledge({ ...ZCASH_MAINNET, published: false });
     expect(p.slug).toBe(ZCASH_SLUG);
     expect(p.chain).toBe("Zcash mainnet");
     expect(p.testnet).toBe(false);
