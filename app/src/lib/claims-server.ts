@@ -99,3 +99,12 @@ export async function loadLineData(db: SupabaseClient): Promise<{ line: LineEntr
 export async function loadLine(db: SupabaseClient) {
   return (await loadLineData(db)).line;
 }
+
+/** Full payout address for one person (pid = their earliest claim id). Server only. */
+export async function payoutAddressFor(db: SupabaseClient, pid: string): Promise<{ address: string } | { error: string; status: number }> {
+  if (!/^[0-9a-f-]{36}$/i.test(pid)) return { error: "Unknown person", status: 400 };
+  const { data, error } = await db.from("pledger_claims").select("payout_address").eq("id", pid).maybeSingle();
+  if (error) return { error: "Could not load", status: 500 };
+  if (!data) return { error: "Unknown person", status: 404 };
+  return { address: String(data.payout_address).toLowerCase() };
+}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useConnection, useConnect, useConnectors, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { base } from "wagmi/chains";
 import { Icon } from "@/components/Icons";
+import { CardPay } from "./CardPay";
 import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
 import { centsToUnits, formatCents, type LineEntry } from "@/lib/claims";
 
@@ -121,6 +122,7 @@ export function PayPanel({ entry, onPaid }: { entry: LineEntry; onPaid: () => vo
               </button>
             </div>
           )}
+          <CardPay entry={entry} />
           <label className="cl-soft" htmlFor={`paste-${entry.pid}-${entry.group}`}>Paid outside Pledger? Paste the transaction link</label>
           <div className="cl-row">
             <input
