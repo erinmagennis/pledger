@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { unitsToCents } from "@/lib/claims";
 import { parseTxHash } from "@/lib/base";
 import { recordUsdcPayment } from "@/lib/payments-server";
+import { ipOf, limit, tooMany, TEN_MIN } from "@/lib/ratelimit";
 import { DB_MISSING, getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -11,6 +12,7 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
 
 /** Check a Base mainnet USDC payment to a claimant and record it once. */
 export async function POST(req: Request) {
+  if (!limit("payments-verify", ipOf(req), 30, TEN_MIN)) return tooMany();
   const db = getSupabase();
   if (!db) return NextResponse.json(DB_MISSING, { status: 503 });
   let body: { claimAddress?: string; txHash?: string };

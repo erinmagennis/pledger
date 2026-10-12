@@ -4,11 +4,12 @@
 // source 'outside': the payer pressed "I'm paying this outside Pledger".
 // Holds are a courtesy: they never block recording a payment. Before sql/005 runs, nothing is held
 // and the answer says held: false.
-// In-memory limits per IP, like /api/demo/fund (reset on restart, per serverless instance): requests per
+// In-memory limits per IP (src/lib/ratelimit.ts; reset on restart, per serverless instance): requests per
 // window, and at most PER_IP_HELD people held at once. Holding more ends that IP's oldest holds.
 import { NextResponse } from "next/server";
 import { isHoldSource } from "@/lib/claims";
 import { createHolds, endHolds, payoutAddressesFor } from "@/lib/claims-server";
+import { ipOf, limit } from "@/lib/ratelimit";
 import { DB_MISSING, getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -18,7 +19,6 @@ const MAX_PIDS = 10;
 const WINDOW_MS = 10 * 60 * 1000;
 const PER_IP = 60;
 const PER_IP_HELD = 10;
-const ipHits = new Map<string, number[]>();
 /** Per IP: pid -> its hold row id and expiry, oldest first (Map keeps insertion order). */
 const ipHeld = new Map<string, Map<string, { id: string; until: number }>>();
 
@@ -43,12 +43,6 @@ function trackHolds(ip: string, held: [pid: string, id: string][], until: number
 
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
-function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip") ?? "local";
-}
-
 export async function POST(req: Request) {
   const db = getSupabase();
   if (!db) return NextResponse.json(DB_MISSING, { status: 503 });
@@ -63,12 +57,9 @@ export async function POST(req: Request) {
   const pids = [...new Set(body.pids as string[])];
   if (pids.length > MAX_PIDS) return bad(`Up to ${MAX_PIDS} people at a time`);
 
-  const ip = clientIp(req);
+  const ip = ipOf(req);
   const now = Date.now();
-  const hits = (ipHits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (hits.length >= PER_IP) return bad("Too many holds from here. Try again in a few minutes.", 429);
-  hits.push(now);
-  ipHits.set(ip, hits);
+  if (!limit("line-hold", ip, PER_IP, WINDOW_MS, now)) return bad("Too many holds from here. Try again in a few minutes.", 429);
 
   try {
     const addresses = await payoutAddressesFor(db, pids);

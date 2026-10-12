@@ -64,6 +64,7 @@ Still to build tests for:
 
 - One person making many throwaway wallets: limited per visitor, a small match per wallet, and Pledger can top up the pool. RULE
 - Faucet or fee sponsor down: a clear message plus a backup pre-funded demo wallet. RULE
+- Faucet down / abused: 3 wallets per IP an hour (in memory), and at most 40 fundings an hour across everyone (`pledger_faucet_log`, sql/006); over either it answers 429 with a plain message. Before 006 runs only the per-IP limit applies. The claim, onramp and payment routes also answer 429 after too many requests from one IP in 10 minutes (`app/src/lib/ratelimit.ts`). RULE
 - Match used up: "Your $20 match was already used" shows, and donations still go through. RULE
 - Lock date passing while judges review (winners by Dec 5): the demo pool is locked until 31 Dec 2026. RULE
 - Browser storage blocked (private mode): the wallet lives in memory for the visit. RULE

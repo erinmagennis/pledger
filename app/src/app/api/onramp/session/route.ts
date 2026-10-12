@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { loadLine, payoutAddressFor } from "@/lib/claims-server";
 import { buildOnrampParams, clientIp, friendlyStripeError, NOT_CONNECTED_MSG, parseTempoBody, type OnrampNetwork } from "@/lib/onramp";
+import { ipOf, limit, tooMany, TEN_MIN } from "@/lib/ratelimit";
 import { DB_MISSING, getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -16,6 +17,7 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
  * test wallet instead. No database, nothing recorded; the donation is a separate step from that wallet.
  */
 export async function POST(req: Request) {
+  if (!limit("onramp-session", ipOf(req), 20, TEN_MIN)) return tooMany();
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return bad(NOT_CONNECTED_MSG, 503);
 

@@ -3,6 +3,7 @@ import { checkClaimSignature, displayLabel, isDisplayMode, nameProblem, NEXT_UPD
 import { checkUploads, loadLine, readUploads } from "@/lib/claims-server";
 import { verifyOnBase } from "@/lib/base";
 import { recordClaims } from "@/lib/eas";
+import { ipOf, limit, tooMany, TEN_MIN } from "@/lib/ratelimit";
 import { DB_MISSING, getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -25,6 +26,7 @@ const SIGNATURE_ERRORS: Record<string, string> = {
  * signature, rejects duplicates and excluded inboxes, then stores only hashed and public fields.
  */
 export async function POST(req: Request) {
+  if (!limit("claims-submit", ipOf(req), 10, TEN_MIN)) return tooMany();
   const db = getSupabase();
   if (!db) return NextResponse.json(DB_MISSING, { status: 503 });
 

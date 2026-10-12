@@ -2,14 +2,20 @@
 // Funds a throwaway browser wallet with Tempo testnet stablecoins via the public faucet.
 // In-memory rate limit: 3 fundings per IP per hour, 1 per address. Resets on server restart,
 // and each serverless instance keeps its own counts. Good enough for test money.
+// Global cap (sql/006): at most GLOBAL_PER_HOUR fundings an hour across everyone, counted in
+// pledger_faucet_log so it holds across instances. Before 006 runs, only the in-memory limit applies.
 import { NextResponse, type NextRequest } from "next/server";
 import { getAddress, isAddress, type Address } from "viem";
+import { createHash } from "node:crypto";
+import { isMissingSchema } from "@/lib/claims-server";
+import { getSupabase } from "@/lib/supabase";
 import { TEMPO_RPC, alphaBalance, usd } from "@/lib/tempo";
 
 export const dynamic = "force-dynamic";
 
 const HOUR = 60 * 60 * 1000;
 const PER_IP = 3;
+const GLOBAL_PER_HOUR = 40;
 const ipHits = new Map<string, number[]>();
 const fundedAddresses = new Set<string>();
 
@@ -64,6 +70,20 @@ export async function POST(req: NextRequest) {
     return fail(429, `Test money is limited to ${PER_IP} wallets an hour. Try again in about ${waitMin} minutes.`);
   }
 
+  // Global cap. A missing table (sql/006 not run) or a read error skips it: the demo keeps working.
+  const db = getSupabase();
+  let logging = false;
+  if (db) {
+    const since = new Date(now - HOUR).toISOString();
+    const recent = await db.from("pledger_faucet_log").select("id").gt("created_at", since).limit(GLOBAL_PER_HOUR);
+    if (!recent.error) {
+      logging = true;
+      if ((recent.data ?? []).length >= GLOBAL_PER_HOUR) return fail(429, "The demo is busy right now. Try again in a few minutes.");
+    } else if (!isMissingSchema(recent.error)) {
+      console.warn("[pledger] faucet cap read failed", { code: recent.error.code });
+    }
+  }
+
   let faucet: { result?: unknown; error?: { message?: string } };
   try {
     const res = await fetch(TEMPO_RPC, {
@@ -84,6 +104,11 @@ export async function POST(req: NextRequest) {
   hits.push(now);
   ipHits.set(ip, hits);
   fundedAddresses.add(key);
+  if (db && logging) {
+    const ipHash = createHash("sha256").update(ip).digest("hex");
+    const ins = await db.from("pledger_faucet_log").insert({ ip_hash: ipHash, address: key });
+    if (ins.error && !isMissingSchema(ins.error)) console.warn("[pledger] faucet log write failed", { code: ins.error.code });
+  }
 
   try {
     const balance = await waitForBalance(address);
