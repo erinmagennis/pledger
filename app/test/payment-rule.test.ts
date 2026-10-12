@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { Hex } from "viem";
 import { BASE_USDC, TRANSFER_TOPIC, checkPaymentRule, usdcTransfersTo, type CheckedPayment, type ReceiptLike } from "@/lib/base";
 import type { LineEntry } from "@/lib/claims";
-import { allPaid, owedUnits, recordUsdcPayment, type PaymentDeps } from "@/lib/payments-server";
+import { allPaid, extraMessage, owedUnits, recordUsdcPayment, type PaymentDeps } from "@/lib/payments-server";
 import type { RecordInput } from "@/lib/eas";
-import { fakeDb } from "./fake-db";
+import { fakeDb, type FakeSchema } from "./fake-db";
 
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -76,10 +76,14 @@ function claimRow(id: string, feeCents: number, selfBacked: boolean, created = "
   };
 }
 
-function setup(opts: { payments?: Record<string, unknown>[]; units?: bigint; blockTime?: string; check?: CheckedPayment } = {}) {
+/** The database before sql/005: pledger_payments has no `kind` column. */
+const BEFORE_005: FakeSchema = { columns: { pledger_payments: ["tx_hash", "to_address", "amount_units", "block_number", "block_time"] } };
+
+function setup(opts: { payments?: Record<string, unknown>[]; units?: bigint; blockTime?: string; check?: CheckedPayment; schema?: FakeSchema } = {}) {
   const f = fakeDb(
     { pledger_claims: [claimRow("1", 1000, true), claimRow("2", 500, false)], pledger_payments: opts.payments ?? [] },
     { pledger_payments: ["tx_hash", "to_address"] },
+    opts.schema,
   );
   const attested: RecordInput[][] = [];
   const deps: Partial<PaymentDeps> = {
@@ -114,13 +118,56 @@ describe("recordUsdcPayment", () => {
     expect(s.tables.pledger_payments).toHaveLength(0);
   });
 
-  it("rejects a partial payment, names the full amount, and logs one line for follow-up", async () => {
+  it("before sql/005: rejects a partial payment, names the full amount, and logs one line for follow-up", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const s = setup({ units: usd(10) });
+    const s = setup({ units: usd(10), schema: BEFORE_005 });
     expect(await s.run()).toMatchObject({ ok: false, error: "Does not match what is owed ($15.00)" });
     expect(s.attested).toHaveLength(0);
     expect(warn).toHaveBeenCalledWith("[pledger] payment rejected", { txHash: TX, to: A, reason: "Does not match what is owed ($15.00)", amountUnits: "10000000", owedUnits: "15000000" });
+    expect(s.tables.pledger_payments).toHaveLength(0);
     warn.mockRestore();
+  });
+
+  it("records a partial payment as an extra: logged, shown on the row, never counted or attested", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const s = setup({ units: usd(10) });
+    const r = await s.run();
+    expect(r).toMatchObject({ ok: true, extra: { message: "Recorded as extra: it does not match what this person is owed ($15.00)" } });
+    expect(s.tables.pledger_payments).toEqual([expect.objectContaining({ tx_hash: TX, amount_units: "10000000", kind: "extra" })]);
+    expect(s.attested).toHaveLength(0);
+    expect(warn).toHaveBeenCalledWith("[pledger] payment rejected", expect.objectContaining({ reason: "Does not match what is owed ($15.00)" }));
+    // Still owes the full $15: the extra never fills a place, and it shows on the person's first place.
+    const entries = r.ok ? r.entries : [];
+    expect(entries.map((e) => [e.status, e.paidCents])).toEqual([["waiting", 0], ["waiting", 0]]);
+    expect(entries[0]!.extras).toEqual([{ cents: 1000, txHash: TX }]);
+    expect(entries[1]!.extras).toBeUndefined();
+    warn.mockRestore();
+  });
+
+  it("an extra does not change what is owed: the full amount after it still counts and attests", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const s = setup({ units: usd(20) });
+    expect((await s.run()).ok).toBe(true); // $20 against $15 owed: an extra
+    s.attested.length = 0;
+    const r = await recordUsdcPayment(s.db, A, TX2, {
+      check: async (h) => ({ ok: true, txHash: h, to: A, amountUnits: usd(15), blockNumber: 6n, blockTime: "2026-10-12T00:00:00.000Z" }),
+      attest: async (_db, inputs) => void s.attested.push(inputs),
+      later: (fn) => void fn(),
+    });
+    expect(r).toMatchObject({ ok: true });
+    expect(r.ok && r.extra).toBeFalsy();
+    expect(s.attested).toHaveLength(1);
+    vi.restoreAllMocks();
+  });
+
+  it("an overpayment is an extra too, and a payment sent before the claim is still not recorded", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const over = setup({ units: usd(16) });
+    expect(await over.run()).toMatchObject({ ok: true, extra: { message: extraMessage(usd(15)) } });
+    const early = setup({ units: usd(16), blockTime: "2026-10-01T00:00:00.000Z" });
+    expect(await early.run()).toMatchObject({ ok: false, error: "Sent before this claim was made" });
+    expect(early.tables.pledger_payments).toHaveLength(0);
+    vi.restoreAllMocks();
   });
 
   it("accepts 99.5% of what is owed and attests, with nothing left owing", async () => {
@@ -136,11 +183,17 @@ describe("recordUsdcPayment", () => {
     expect(s.attested).toHaveLength(1);
   });
 
-  it("does not attest again for someone already paid (the new payment is rejected)", async () => {
+  it("does not attest again for someone already paid (the new payment is an extra)", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const earlier = { tx_hash: TX2, to_address: A, amount_units: "15000000", block_time: "2026-10-11T00:00:00Z" };
     const s = setup({ payments: [earlier], units: usd(15) });
-    expect(await s.run()).toMatchObject({ ok: false, error: "Does not match what is owed ($0.00)" });
+    expect(await s.run()).toMatchObject({ ok: true, extra: { message: "Recorded as extra: it does not match what this person is owed ($0.00)" } });
     expect(s.attested).toHaveLength(0);
+    // Before sql/005 it is rejected as before.
+    const old = setup({ payments: [{ ...earlier }], units: usd(15), schema: BEFORE_005 });
+    expect(await old.run()).toMatchObject({ ok: false, error: "Does not match what is owed ($0.00)" });
+    expect(old.attested).toHaveLength(0);
+    vi.restoreAllMocks();
   });
 
   it("keeps idempotency: the same tx and person is already recorded", async () => {

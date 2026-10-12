@@ -4,9 +4,9 @@ import "server-only";
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Hex } from "viem";
-import { buildLine, centsToUnits, type ClaimRecord, type LineEntry, type PaymentRecord } from "./claims";
-import { checkPaymentRule, checkUsdcPayment } from "./base";
-import { CLAIM_COLUMNS, loadLine } from "./claims-server";
+import { buildLine, centsToUnits, type ClaimRecord, type LineEntry } from "./claims";
+import { SENT_BEFORE, checkPaymentRule, checkUsdcPayment, dollars } from "./base";
+import { CLAIM_COLUMNS, isMissingSchema, loadLine, readPayments } from "./claims-server";
 import { recordClaims, type RecordInput } from "./eas";
 
 export const PAYMENT_REASONS: Record<string, string> = {
@@ -20,8 +20,11 @@ const ALREADY = "This payment is already recorded";
 /** Shown when one tx pays several people before sql/003_pledger_payments_per_recipient.sql has run. */
 export const NEEDS_003 = "Batch payments need the 003 update";
 
+/** What the payer sees when real money arrived but did not match what the person is owed. */
+export const extraMessage = (owed: bigint) => `Recorded as extra: it does not match what this person is owed (${dollars(owed > 0n ? owed : 0n)})`;
+
 export type RecordResult =
-  | { ok: true; amountUnits: bigint; blockTime: string; entries: LineEntry[] }
+  | { ok: true; amountUnits: bigint; blockTime: string; entries: LineEntry[]; extra?: { message: string } }
   | { ok: false; status: number; error: string; duplicate?: boolean };
 
 /** What one person still owes, in USDC units: fee minus paid over their unpaid and partial entries.
@@ -41,8 +44,6 @@ export type PaymentDeps = {
 
 const DEPS: PaymentDeps = { check: (h, to) => checkUsdcPayment(h, to), attest: recordClaims, later: after };
 
-const PAY_COLUMNS = "tx_hash,to_address,amount_units,block_time";
-
 /** `to` must be a lowercased 0x address and `txHash` a parsed hash. */
 export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: Hex, deps: Partial<PaymentDeps> = {}): Promise<RecordResult> {
   const { check, attest, later } = { ...DEPS, ...deps };
@@ -59,38 +60,43 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
   if (!checked.ok) return { ok: false, status: 400, error: PAYMENT_REASONS[checked.reason] ?? "Could not check that payment" };
 
   // The rule: sent after the first claim, and the full remaining amount give or take 0.5%.
-  const before = await db.from("pledger_payments").select(PAY_COLUMNS).eq("to_address", to);
-  if (before.error) return { ok: false, status: 500, error: "Could not load" };
-  const linesBefore = buildLine(mineClaims, (before.data ?? []) as PaymentRecord[]);
+  // Extras are left out here (buildLine skips them), so they never change what is owed.
+  let before;
+  try {
+    before = await readPayments(db, to);
+  } catch {
+    return { ok: false, status: 500, error: "Could not load" };
+  }
+  const linesBefore = buildLine(mineClaims, before);
   const firstClaimAt = mineClaims.reduce((m, c) => (c.created_at < m ? c.created_at : m), mineClaims[0]!.created_at);
   const owed = owedUnits(linesBefore);
   const rule = checkPaymentRule({ blockTime: checked.blockTime, firstClaimAt, amountUnits: checked.amountUnits, owedUnits: owed });
   if (!rule.ok) {
     // Real money on Base that the rule turned away: one line in the server logs so it can be followed up by hand.
     console.warn("[pledger] payment rejected", { txHash: checked.txHash, to, reason: rule.error, amountUnits: checked.amountUnits.toString(), owedUnits: owed.toString() });
-    return { ok: false, status: 400, error: rule.error };
+    // Sent before the claim stays rejected. A wrong amount is stored as an extra (sql/005), shown on the
+    // person's row and never counted. Before 005 the insert fails on the unknown column: reject as before.
+    if (rule.error === SENT_BEFORE) return { ok: false, status: 400, error: rule.error };
+    const extra = await db.from("pledger_payments").insert({ ...row(checked), kind: "extra" });
+    if (extra.error) {
+      if (extra.error.code === "23505") return duplicateOrNeeds003(db, checked.txHash, checked.to);
+      if (!isMissingSchema(extra.error)) console.warn("[pledger] extra not saved", { txHash: checked.txHash, code: extra.error.code });
+      return { ok: false, status: 400, error: rule.error };
+    }
+    const line = await loadLine(db).catch(() => []);
+    const pid = linesBefore[0]?.pid;
+    return { ok: true, amountUnits: checked.amountUnits, blockTime: checked.blockTime, entries: line.filter((e) => e.pid === pid), extra: { message: extraMessage(owed) } };
   }
 
-  const ins = await db.from("pledger_payments").insert({
-    tx_hash: checked.txHash,
-    to_address: checked.to,
-    amount_units: checked.amountUnits.toString(),
-    block_number: Number(checked.blockNumber),
-    block_time: checked.blockTime,
-  });
+  const ins = await db.from("pledger_payments").insert(row(checked));
   if (ins.error) {
-    if (ins.error.code === "23505") {
-      // Same tx and person: already recorded. Same tx, other person: the old per-tx rule (before sql/003) blocked it.
-      const again = await db.from("pledger_payments").select("tx_hash").eq("tx_hash", checked.txHash).eq("to_address", checked.to).maybeSingle();
-      if (again.data) return { ok: false, status: 409, error: ALREADY, duplicate: true };
-      return { ok: false, status: 409, error: NEEDS_003 };
-    }
+    if (ins.error.code === "23505") return duplicateOrNeeds003(db, checked.txHash, checked.to);
     return { ok: false, status: 500, error: "Could not save the payment" };
   }
 
   // Public record for each of this person's claims, only on the step from not-all-paid to all-paid.
-  const payments = await db.from("pledger_payments").select(PAY_COLUMNS).eq("to_address", to);
-  const mine = buildLine(mineClaims, (payments.data ?? []) as PaymentRecord[]);
+  // Extras are never in `mine`'s paid amounts, so an extra can never trigger a record.
+  const mine = buildLine(mineClaims, await readPayments(db, to).catch(() => []));
   if (!allPaid(linesBefore) && allPaid(mine)) {
     later(() =>
       attest(
@@ -110,4 +116,21 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
 
   const line = await loadLine(db).catch(() => []);
   return { ok: true, amountUnits: checked.amountUnits, blockTime: checked.blockTime, entries: line.filter((e) => e.pid === mine[0]?.pid) };
+}
+
+type Checked = Extract<Awaited<ReturnType<typeof checkUsdcPayment>>, { ok: true }>;
+
+const row = (c: Checked) => ({
+  tx_hash: c.txHash,
+  to_address: c.to,
+  amount_units: c.amountUnits.toString(),
+  block_number: Number(c.blockNumber),
+  block_time: c.blockTime,
+});
+
+/** Same tx and person: already recorded. Same tx, other person: the old per-tx rule (before sql/003) blocked it. */
+async function duplicateOrNeeds003(db: SupabaseClient, txHash: string, to: string): Promise<RecordResult> {
+  const again = await db.from("pledger_payments").select("tx_hash").eq("tx_hash", txHash).eq("to_address", to).maybeSingle();
+  if (again.data) return { ok: false, status: 409, error: ALREADY, duplicate: true };
+  return { ok: false, status: 409, error: NEEDS_003 };
 }

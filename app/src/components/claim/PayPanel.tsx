@@ -7,6 +7,7 @@ import { Icon } from "@/components/Icons";
 import { CardPay } from "./CardPay";
 import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
 import { centsToUnits, formatCents, type LineEntry } from "@/lib/claims";
+import { hold } from "./holds";
 
 async function recordPayment(claimAddress: string, txHash: string): Promise<string> {
   const res = await fetch("/api/payments/verify", {
@@ -16,6 +17,8 @@ async function recordPayment(claimAddress: string, txHash: string): Promise<stri
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(j.error || "Could not check that payment");
+  // Real money that did not match what was owed: stored as an extra and shown on the row, never counted.
+  if (j.kind === "extra" && j.message) return String(j.message);
   return `Payment of ${formatCents(j.amountCents)} recorded.`;
 }
 
@@ -51,6 +54,8 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
   if (entry.status === "paid") return null;
 
   async function openPanel() {
+    // Opening holds this person for 10 minutes, so "Help pay people back" sends other helpers to the next people.
+    if (!open) void hold([entry.pid], "pledger");
     setOpen((o) => !o);
     if (address) return;
     try {
@@ -76,6 +81,8 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
         onPaid();
         return;
       }
+      // Refresh the hold as the payer signs.
+      await hold([entry.pid], "pledger");
       const tx = await write.mutateAsync({
         address: BASE_USDC,
         abi: USDC_ABI,

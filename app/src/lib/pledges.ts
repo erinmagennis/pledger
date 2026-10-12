@@ -2,7 +2,7 @@
 // test-match-pool from Tempo testnet (withLivePool), artizen-give-back from the
 // Supabase line (withLiveLine), and the home tracker from both (computeTotals).
 // Pure: no server imports, safe for client components and tests.
-import { fillPerson, formatCents, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
+import { fillPerson, formatCents, isExtra, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
 
 // Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
 const TEMPO_EXPLORER = "https://explore.testnet.tempo.xyz";
@@ -267,6 +267,8 @@ export function avatarInitials(label: string): string {
 export function computeTotals(pool: PoolTotals | null, line: LineEntry[], payments: PaymentRecord[]): Totals {
   // Same capped number as the pledge page; raw payments only feed the chart and the feed.
   const paidCents = paidFromLine(line);
+  // Extras (sql/005) are shown on the person's row only; they never count toward any total.
+  const counted = payments.filter((p) => !isExtra(p));
   const testnetCents = pool ? unitsCents(pool.donatedUnits) + unitsCents(pool.matchedUnits) : 0;
 
   const byDay = new Map<string, number>();
@@ -281,7 +283,7 @@ export function computeTotals(pool: PoolTotals | null, line: LineEntry[], paymen
   const credited = (fees: number[], units: bigint) => fillPerson(fees, units).reduce((s, f) => s + f.paidCents, 0);
   const runUnits = new Map<string, bigint>();
   const runCents = new Map<string, number>();
-  for (const p of [...payments].sort((a, b) => Date.parse(a.block_time) - Date.parse(b.block_time))) {
+  for (const p of [...counted].sort((a, b) => Date.parse(a.block_time) - Date.parse(b.block_time))) {
     const who = shortAddress(p.to_address.toLowerCase());
     const units = (runUnits.get(who) ?? 0n) + paymentUnits(p.amount_units);
     runUnits.set(who, units);
@@ -324,7 +326,7 @@ export function computeTotals(pool: PoolTotals | null, line: LineEntry[], paymen
         testnet: true,
         href: TX_URL + e.tx,
       })),
-    ...payments.map((p) => ({
+    ...counted.map((p) => ({
       av: null,
       text: `Give-back of ${formatCents(unitsCents(p.amount_units))} paid`,
       time: Math.floor(new Date(p.block_time).getTime() / 1000),

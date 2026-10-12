@@ -10,9 +10,10 @@ import { base } from "wagmi/chains";
 import { Icon } from "@/components/Icons";
 import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
 import { formatCents } from "@/lib/claims";
+import { hold, myHeldPids } from "./holds";
 
-type PreviewTransfer = { address: string; shortAddress: string; label: string; places: number[]; amountUnits: string; amountCents: number };
-type Preview = { transfers: PreviewTransfer[]; totalCents: number; leftoverCents: number; nextCents: number };
+type PreviewTransfer = { pid: string; address: string; shortAddress: string; label: string; places: number[]; amountUnits: string; amountCents: number };
+type Preview = { transfers: PreviewTransfer[]; totalCents: number; leftoverCents: number; nextCents: number; heldCount?: number };
 /** A transfer that was sent, with the tx hashes to check it against (best match first). */
 type Sent = { t: PreviewTransfer; txs: string[] };
 
@@ -23,20 +24,23 @@ const sameTransfers = (a: PreviewTransfer[], b: PreviewTransfer[]) =>
 const AMOUNTS = [25, 50, 100] as const;
 const PEOPLE = [1, 3, 5] as const;
 
+/** The split request, with the people this helper already holds so their own hold does not hide them. */
+const allocBody = (key: string) => JSON.stringify({ ...JSON.parse(key), mine: myHeldPids() });
+
 const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
 
-/** Record one person's share of a tx. Already recorded counts as done. */
 /** A failure worth checking again later: not on Base yet, or the server had trouble. Anything else is the rule saying no. */
 const retryable = (status: number, error: string) => status >= 500 || /not found/i.test(error);
 
-async function record(address: string, txHash: string): Promise<{ ok: true } | { ok: false; error: string; final: boolean }> {
+/** Record one person's share of a tx. Already recorded counts as done. `note` is set when it was stored as an extra. */
+async function record(address: string, txHash: string): Promise<{ ok: true; note?: string } | { ok: false; error: string; final: boolean }> {
   const res = await fetch("/api/payments/verify", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ claimAddress: address, txHash }),
   });
-  if (res.ok) return { ok: true };
   const j = await res.json().catch(() => ({}));
+  if (res.ok) return j.kind === "extra" && j.message ? { ok: true, note: String(j.message) } : { ok: true };
   if (res.status === 409 && /already recorded/i.test(j.error ?? "")) return { ok: true };
   const error = j.error || "Could not check that payment";
   return { ok: false, error, final: !retryable(res.status, error) };
@@ -67,6 +71,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
   const [progress, setProgress] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [notes, setNotes] = useState<string[]>([]);
   const [hashes, setHashes] = useState<string[]>([]);
   // Sent but not yet recorded. While this holds anything, the button checks again instead of sending.
   const [pending, setPending] = useState<Sent[]>([]);
@@ -102,12 +107,14 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         const res = await fetch("/api/line/allocate", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: key,
+          body: allocBody(key),
           signal: ctl.signal,
         });
         const j = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(j.error || "Could not load the line");
         setPreview(j as Preview);
+        // Hold these people while this helper decides, so a second helper is sent to the next people instead.
+        void hold((j as Preview).transfers.map((t) => t.pid), "pledger");
       } catch (e) {
         if (ctl.signal.aborted) return;
         setPreview(null);
@@ -136,9 +143,10 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
 
   /** Record each sent transfer. Returns the ones still worth checking again, with every error.
    * A transfer every hash of which got a final rule rejection is dropped, so Send comes back. */
-  async function recordAll(items: Sent[]): Promise<{ left: Sent[]; failed: string[] }> {
+  async function recordAll(items: Sent[]): Promise<{ left: Sent[]; failed: string[]; notes: string[] }> {
     const left: Sent[] = [];
     const failed: string[] = [];
+    const notes: string[] = [];
     for (const item of items) {
       let last = "Could not check that payment";
       let ok = false;
@@ -147,6 +155,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         const r = await record(item.t.address, h);
         if (r.ok) {
           ok = true;
+          if (r.note) notes.push(`${item.t.label || item.t.shortAddress}: ${r.note}`);
           break;
         }
         last = r.error;
@@ -158,7 +167,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         failed.push(`${item.t.label || item.t.shortAddress}: ${last}`);
       }
     }
-    return { left, failed };
+    return { left, failed, notes };
   }
 
   async function sendBatch(list: PreviewTransfer[]): Promise<string[]> {
@@ -217,6 +226,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         const r = await record(t.address, h);
         if (r.ok || r.final) setPending((p) => p.filter((x) => x !== item));
         if (!r.ok) setErr(`${t.label || t.shortAddress}: ${r.error}`);
+        else if (r.note) setNotes((n) => [...n, `${t.label || t.shortAddress}: ${r.note}`]);
       } catch (e) {
         if (!sent.length) throw e;
         setErr(`${shortErr(e, "Payment failed")}. ${sent.length} of ${list.length} sent before that.`);
@@ -228,7 +238,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
 
   /** Same split as the preview right now, or null when it moved. */
   async function stillSame(list: PreviewTransfer[]): Promise<boolean> {
-    const res = await fetch("/api/line/allocate", { method: "POST", headers: { "content-type": "application/json" }, body: key });
+    const res = await fetch("/api/line/allocate", { method: "POST", headers: { "content-type": "application/json" }, body: allocBody(key) });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(j.error || "Could not load the line");
     setPreview(j as Preview);
@@ -245,6 +255,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
       setProgress("Checking each payment…");
       const r = await recordAll(items);
       setPending(r.left);
+      setNotes(r.notes);
       setProgress(null);
       if (r.failed.length) setErr(r.failed.join(" · "));
       else setDone("Payments recorded. Thank you.");
@@ -263,6 +274,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     setBusy(true);
     setErr(null);
     setDone(null);
+    setNotes([]);
     setHashes([]);
     try {
       if (chainId !== base.id) await switchChain.mutateAsync({ chainId: base.id });
@@ -272,6 +284,8 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         onPaid();
         return;
       }
+      // Refresh the hold as the payer signs, so it lasts while the wallet and Base confirm.
+      await hold(list.map((t) => t.pid), "pledger");
       let failed: string[] = [];
       let sentCount = list.length;
       let batched = false;
@@ -282,6 +296,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
           setProgress("Checking each payment…");
           const r = await recordAll(pairUp(list, txs));
           setPending(r.left);
+          setNotes(r.notes);
           failed = r.failed;
         } catch (e) {
           if (!unsupported(e)) throw e;
@@ -356,6 +371,8 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
           <p className="cl-soft">Working out who is next…</p>
         ) : !count && preview.nextCents > 0 ? (
           <p className="cl-soft">Not enough for the next person ({formatCents(preview.nextCents)}).</p>
+        ) : !count && preview.heldCount ? (
+          <p className="cl-soft">Someone is paying the next people now. Check again in a few minutes.</p>
         ) : !count ? (
           <p className="cl-soft">No one is waiting yet.</p>
         ) : (
@@ -369,6 +386,11 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
                 </li>
               ))}
             </ul>
+            {!!preview.heldCount && (
+              <p className="cl-soft">
+                Skipped {people(preview.heldCount)}: someone else is paying them right now.
+              </p>
+            )}
             {preview.leftoverCents > 0 && (
               <p className="cl-soft">
                 {preview.nextCents > 0
@@ -419,6 +441,9 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
       <div className="cl-status">
         {progress && <span>{progress}</span>}
         {done && <span>{done}</span>}
+        {notes.map((n) => (
+          <span key={n}>{n}</span>
+        ))}
         {err && <span className="cl-error">{err}</span>}
         {hashes.map((h) => (
           <a key={h} className="cl-soft" href={BASESCAN_TX + h} target="_blank" rel="noreferrer">View on Basescan</a>

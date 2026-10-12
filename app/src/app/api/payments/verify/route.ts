@@ -29,6 +29,8 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     recorded: true,
+    // Set when the money arrived but did not match what is owed: stored as an extra, never counted.
+    ...(r.extra ? { kind: "extra", message: r.extra.message } : { kind: "paid" }),
     amountCents: unitsToCents(r.amountUnits),
     blockTime: r.blockTime,
     entries: r.entries,

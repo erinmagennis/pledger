@@ -52,7 +52,15 @@ export type PaymentRecord = {
   to_address: string;
   amount_units: string | number;
   block_time: string;
+  /** 'extra' (sql/005): real money that did not match what was owed. Shown, never counted. Missing means 'paid'. */
+  kind?: "paid" | "extra";
 };
+
+/** True for a payment stored as an extra: it never counts toward paid, owed, totals or records. */
+export const isExtra = (p: Pick<PaymentRecord, "kind">) => p.kind === "extra";
+
+/** A payment that arrived but did not match what was owed, shown on the person's row. */
+export type LineExtra = { cents: number; txHash: string };
 
 export type LineStatus = "waiting" | "partial" | "paid";
 
@@ -68,6 +76,11 @@ export type LineEntry = {
   status: LineStatus;
   shortAddress: string;
   firstAt: string;
+  /** Someone is paying this person right now (sql/005 holds), so Help pay skips them until heldUntil. */
+  held?: boolean;
+  heldUntil?: string;
+  /** Extras sent to this person, on their first place only. */
+  extras?: LineExtra[];
 };
 
 // ---------- reasons ----------
@@ -115,6 +128,11 @@ export const unitsToCents = (units: bigint) => Number(units / 10_000n);
 export function formatCents(cents: number): string {
   const whole = cents % 100 === 0;
   return "$" + (cents / 100).toLocaleString("en-US", { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 });
+}
+
+/** "$12.50" with cents always shown: for amounts someone must send exactly. */
+export function formatCentsExact(cents: number): string {
+  return "$" + (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function summarize(rows: ReviewRow[]): ReviewSummary {
@@ -349,9 +367,15 @@ export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): Lin
   });
 
   // Sum each person's payments in USDC units and convert to cents only per entry, so cents never get lost per payment.
+  // Extras never fill an entry; they are listed on the person's first place instead.
   const paidBy = new Map<string, bigint>();
+  const extrasBy = new Map<string, LineExtra[]>();
   for (const pay of payments) {
     const a = pay.to_address.toLowerCase();
+    if (isExtra(pay)) {
+      extrasBy.set(a, [...(extrasBy.get(a) ?? []), { cents: unitsToCents(paymentUnits(pay.amount_units)), txHash: pay.tx_hash }]);
+      continue;
+    }
     paidBy.set(a, (paidBy.get(a) ?? 0n) + paymentUnits(pay.amount_units));
   }
 
@@ -362,10 +386,13 @@ export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): Lin
     fillPerson(mine.map((a) => a.feeCents), paidBy.get(address) ?? 0n).forEach((f, j) => filled.set(mine[j]!, f));
   }
 
+  const shownExtras = new Set<string>();
   return sorted.map((a, i) => {
     const { paidCents, status } = filled.get(a)!;
     const projects = [...a.projects].sort();
     const label = latestLabel.get(a.address)?.label || projects.join(", ");
+    const extras = shownExtras.has(a.address) ? undefined : extrasBy.get(a.address);
+    shownExtras.add(a.address);
     return {
       pid: pidOf.get(a.address)!.id,
       place: i + 1,
@@ -377,7 +404,28 @@ export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): Lin
       status,
       shortAddress: shortAddress(a.address),
       firstAt: a.firstAt,
+      ...(extras ? { extras } : {}),
     };
+  });
+}
+
+// ---------- holds ----------
+
+/** How long a hold keeps a person out of "Help pay people back". */
+export const HOLD_MS = 10 * 60 * 1000;
+export const HOLD_MINUTES = HOLD_MS / 60_000;
+export type HoldSource = "pledger" | "outside";
+export const isHoldSource = (v: unknown): v is HoldSource => v === "pledger" || v === "outside";
+
+/**
+ * Mark held people in the line. `addressOf` maps pid to payout address; `holds` maps address to
+ * the latest expiry (ISO). A hold covers every place of that person.
+ */
+export function markHeld(line: LineEntry[], addressOf: Map<string, string>, holds: Map<string, string>): LineEntry[] {
+  if (!holds.size) return line;
+  return line.map((e) => {
+    const until = holds.get(addressOf.get(e.pid) ?? "");
+    return until ? { ...e, held: true, heldUntil: until } : e;
   });
 }
 

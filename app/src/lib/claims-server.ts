@@ -2,7 +2,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildLine, friendlyReason, markUnclaimable, parseExcludedHashes, toCents, MAX_FILES, type ClaimRecord, type LineEntry, type PaymentRecord, type ReviewRow } from "./claims";
+import { HOLD_MS, buildLine, friendlyReason, markHeld, markUnclaimable, parseExcludedHashes, toCents, MAX_FILES, type ClaimRecord, type LineEntry, type PaymentRecord, type HoldSource, type ReviewRow } from "./claims";
 import { verifyArtizenEmail, pairSelfBacked, MAX_BYTES, type Result as VerifyResult } from "./verify";
 
 export const sha256Hex = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -89,16 +89,77 @@ export function publicRow(r: CheckedRow): ReviewRow {
 
 export const CLAIM_COLUMNS = "id,fingerprint,project,purchased_at,fee_cents,self_backed,payout_address,display_mode,display_name,created_at";
 
-/** The line plus the raw payments it was built from (the home tracker sums them). */
+/** True when an error means sql/005 (or a later file) has not run yet: a table or column is missing.
+ * PostgREST answers PGRST204 (column) or PGRST205 (table); Postgres itself answers 42703 or 42P01. */
+export function isMissingSchema(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  if (["PGRST204", "PGRST205", "42703", "42P01"].includes(error.code ?? "")) return true;
+  return /schema cache|does not exist/i.test(error.message ?? "");
+}
+
+/** Stored payments, paid and extra. `select *` works before and after sql/005 adds `kind`. */
+export async function readPayments(db: SupabaseClient, to?: string): Promise<PaymentRecord[]> {
+  // Supabase returns 1000 rows by default; ask for up to 5000.
+  const q = db.from("pledger_payments").select("*");
+  const r = await (to ? q.eq("to_address", to) : q).range(0, 4999);
+  if (r.error) throw new Error("db-read-failed");
+  return ((r.data ?? []) as Record<string, unknown>[]).map((p) => ({
+    tx_hash: String(p.tx_hash),
+    to_address: String(p.to_address),
+    amount_units: p.amount_units as string | number,
+    block_time: String(p.block_time),
+    kind: p.kind === "extra" ? "extra" : "paid",
+  }));
+}
+
+async function readClaims(db: SupabaseClient): Promise<ClaimRecord[]> {
+  const r = await db.from("pledger_claims").select(CLAIM_COLUMNS).order("created_at", { ascending: true }).range(0, 4999);
+  if (r.error) throw new Error("db-read-failed");
+  return (r.data ?? []) as unknown as ClaimRecord[];
+}
+
+/** The line plus the raw payments it was built from (the home tracker sums them; extras included, marked). */
 export async function loadLineData(db: SupabaseClient): Promise<{ line: LineEntry[]; payments: PaymentRecord[] }> {
-  const [claims, payments] = await Promise.all([
-    // Supabase returns 1000 rows by default; ask for up to 5000.
-    db.from("pledger_claims").select(CLAIM_COLUMNS).order("created_at", { ascending: true }).range(0, 4999),
-    db.from("pledger_payments").select("tx_hash,to_address,amount_units,block_time").range(0, 4999),
-  ]);
-  if (claims.error || payments.error) throw new Error("db-read-failed");
-  const pays = (payments.data ?? []) as PaymentRecord[];
-  return { line: buildLine((claims.data ?? []) as ClaimRecord[], pays), payments: pays };
+  const [claims, pays] = await Promise.all([readClaims(db), readPayments(db)]);
+  return { line: buildLine(claims, pays), payments: pays };
+}
+
+/** Latest hold expiry per payout address, for holds still running at `now`. Holds are a courtesy:
+ * before sql/005, or on any read error, nobody is held. */
+export async function activeHolds(db: SupabaseClient, now = Date.now()): Promise<Map<string, string>> {
+  const r = await db.from("pledger_holds").select("payout_address,expires_at").gt("expires_at", new Date(now).toISOString());
+  if (r.error) {
+    if (!isMissingSchema(r.error)) console.warn("[pledger] holds read failed", { code: r.error.code });
+    return new Map();
+  }
+  const out = new Map<string, string>();
+  for (const h of (r.data ?? []) as { payout_address: string; expires_at: string }[]) {
+    const until = new Date(Date.parse(String(h.expires_at).replace(/(\.\d{3})\d+/, "$1")));
+    if (!(until.getTime() > now)) continue;
+    const a = String(h.payout_address).toLowerCase();
+    const cur = out.get(a);
+    if (!cur || until.toISOString() > cur) out.set(a, until.toISOString());
+  }
+  return out;
+}
+
+/** The public line with held people marked (`held`, `heldUntil`). Used by /api/line and the split. */
+export async function loadLineWithHolds(db: SupabaseClient, now = Date.now()): Promise<LineEntry[]> {
+  const [claims, pays, holds] = await Promise.all([readClaims(db), readPayments(db), activeHolds(db, now)]);
+  const addressOf = new Map(claims.map((c) => [c.id, c.payout_address.toLowerCase()]));
+  return markHeld(buildLine(claims, pays), addressOf, holds);
+}
+
+export type HoldResult = { ok: true; until: string } | { ok: false; missing: true } | { ok: false; missing?: false; error: string };
+
+/** Hold these payout addresses for HOLD_MS. A new row per call; the latest expiry wins, so this also refreshes. */
+export async function createHolds(db: SupabaseClient, addresses: string[], source: HoldSource, now = Date.now()): Promise<HoldResult> {
+  const until = new Date(now + HOLD_MS).toISOString();
+  const rows = [...new Set(addresses.map((a) => a.toLowerCase()))].map((payout_address) => ({ payout_address, expires_at: until, source }));
+  if (!rows.length) return { ok: false, error: "Unknown person" };
+  const r = await db.from("pledger_holds").insert(rows);
+  if (r.error) return isMissingSchema(r.error) ? { ok: false, missing: true } : { ok: false, error: "Could not hold" };
+  return { ok: true, until };
 }
 
 export async function loadLine(db: SupabaseClient) {

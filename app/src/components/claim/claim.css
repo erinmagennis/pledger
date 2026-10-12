@@ -63,6 +63,14 @@ details.cl-help ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
 .cl-pay{grid-column:1/-1;margin:8px 0 0 60px;background:var(--ground);border-radius:var(--r-sm);padding:16px;display:grid;gap:12px;font-size:15px}
 .cl-addr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .cl-empty{color:var(--soft);padding:18px 0 4px}
+/* under a line row: someone paying now, extras received, paying outside Pledger */
+.cl-rowmore{margin:10px 0 0 60px;display:grid;gap:8px;font-size:14px;color:var(--soft)}
+.cl-held{justify-self:start;background:var(--butter-soft);color:#7a6420;border-radius:999px;padding:3px 10px;font-size:13px}
+.cl-outside-start{display:grid;gap:8px;justify-items:start}
+.cl-outside-start .btn-sm{padding:6px 14px;font-size:14px}
+.cl-outside{display:grid;gap:10px;background:var(--ground);border-radius:var(--r-sm);padding:14px 16px;color:var(--ink);font-size:15px;margin:0}
+.cl-copy{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cl-copy .cl-addr{flex:1 1 240px}
 .cl-more{margin-top:16px}
 .cl-tabs{display:flex;gap:8px;margin-top:6px}
 
@@ -75,6 +83,7 @@ details.cl-help ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
  .cl-entry{grid-template-columns:34px 1fr auto}
  .cl-paybtn{grid-column:2/-1;justify-self:start}
  .cl-pay{margin-left:0}
+ .cl-rowmore{margin-left:0}
  .cl-place{font-size:64px}
 }
 .cl-confirm{display:flex;align-items:flex-start;gap:10px;margin-top:14px;font-size:15px;cursor:pointer}

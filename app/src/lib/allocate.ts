@@ -9,6 +9,8 @@ export type AllocEntry = {
   label: string;
   place: number;
   remainingUnits: bigint;
+  /** Someone else is paying this person right now (a hold): skipped, never split to. */
+  held?: boolean;
 };
 
 export type AllocMode = { kind: "amount"; amountUnits: bigint } | { kind: "nextN"; n: number };
@@ -51,14 +53,14 @@ function byPerson(open: AllocEntry[]): { entries: AllocEntry[]; owed: bigint }[]
 }
 
 /**
- * Fill the line in order, skipping anyone already paid. A payment only counts when it is a person's
+ * Fill the line in order, skipping anyone already paid or held by another helper. A payment only counts when it is a person's
  * full remaining amount, so both modes pay whole people: every open entry of each person picked.
  * amount: whole people in line order until the next one does not fit; the rest comes back as leftoverUnits.
  * nextN: the next N people (distinct payout addresses), each for their full remaining amount.
  * Entries for the same payout address are merged into one transfer.
  */
 export function allocate(entries: AllocEntry[], mode: AllocMode): Allocation {
-  const open = entries.filter((e) => e.remainingUnits > 0n);
+  const open = entries.filter((e) => e.remainingUnits > 0n && !e.held);
   const picks: { e: AllocEntry; units: bigint }[] = [];
 
   if (mode.kind === "amount") {

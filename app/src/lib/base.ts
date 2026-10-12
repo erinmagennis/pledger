@@ -70,14 +70,16 @@ export function sumUsdcTransfersTo(receipt: ReceiptLike, to: string): bigint {
 const toMs = (iso: string) => Date.parse(iso.replace(/(\.\d{3})\d+/, "$1"));
 
 /** "$12.50" with cents always shown. */
-const dollars = (units: bigint) => "$" + (Number(units / 10_000n) / 100).toFixed(2);
+export const dollars = (units: bigint) => "$" + (Number(units / 10_000n) / 100).toFixed(2);
 
 /**
  * The payment rule: a payment counts only if it was sent after the person's first claim
  * and is their full remaining amount, give or take 0.5%. (Self-transfers are dropped before this.)
  */
+export const SENT_BEFORE = "Sent before this claim was made";
+
 export function checkPaymentRule(args: { blockTime: string; firstClaimAt: string; amountUnits: bigint; owedUnits: bigint }): { ok: true } | { ok: false; error: string } {
-  if (!(toMs(args.blockTime) > toMs(args.firstClaimAt))) return { ok: false, error: "Sent before this claim was made" };
+  if (!(toMs(args.blockTime) > toMs(args.firstClaimAt))) return { ok: false, error: SENT_BEFORE };
   const { amountUnits: a, owedUnits: o } = args;
   if (o <= 0n || a * 1000n < o * 995n || a * 1000n > o * 1005n) return { ok: false, error: `Does not match what is owed (${dollars(o > 0n ? o : 0n)})` };
   return { ok: true };

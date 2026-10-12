@@ -45,8 +45,9 @@ Still to build tests for:
 ## Payments (mark paid)
 
 - Pasted transaction on the wrong chain, wrong token (only native USDC on Base counts), reverted or still pending: rejected with the reason. RULE
-- Amount: a payment counts only if it is the person's full remaining 10%, give or take 2%, sent after they joined the line, from someone other than themselves. Any other amount is rejected with "Does not match what is owed". RULE
-- Paid more than owed: recorded, with a note. PLANNED (the exact-amount rule rejects it for now)
+- Amount: a payment counts only if it is the person's full remaining 10%, give or take 0.5%, sent after they joined the line, from someone other than themselves. Any other amount is not counted (see the next line). RULE
+- Paid more than owed, less than owed, or to someone who owes nothing: the real payment is recorded as an extra. It shows on the person's row as "Also received $X.XX, over what was owed" with a Basescan link, and never counts toward paid, owed, totals or public records. The payer sees "Recorded as extra: it does not match what this person is owed ($X.XX)". Sent before the claim and self-transfers are still rejected and not recorded. Until sql/005 runs, a wrong amount is rejected and logged as before. RULE (tests in `app/test/payment-rule.test.ts`, `app/test/holds-extras.test.ts`)
+- Two helpers pay the same person at once: opening Pay on a person, or a "Help pay people back" preview, holds those people for 10 minutes, refreshed when the payer signs. "Help pay people back" skips held people, and their rows show "Someone is paying this person now" with the time the hold ends. "I'm paying this outside Pledger" on a row holds the person the same way and shows the exact amount and full address. A hold never blocks recording a payment, and if two helpers still pay, the second payment is recorded as an extra. Until sql/005 runs, nobody is held. RULE (tests in `app/test/holds-extras.test.ts`)
 - Paid to the wrong address: not counted. RULE
 - The same transaction pasted twice, or for two claims: counted once. A batch transaction paying several people at once: each transfer is matched to its claim. RULE
 - Payment arrives before the claim is verified: held as "received, checking". PLANNED (for now it is rejected as "Sent before this claim was made")
