@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Icon } from "@/components/Icons";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
 import { ActivityCard, HelpCard, HowCard, InPlaceCard, WhyNoteCard } from "@/components/pledge/PledgeCards";
+import { LineCard } from "@/components/claim/LineCard";
 import { getPledge, getPledges } from "@/lib/pledges";
 
 type Params = { slug: string };
@@ -30,6 +31,7 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
       <PledgeHeader pledge={pledge} />
       <section className="pgrid">
         <div className="pcol">
+          {isGiveBack && <LineCard />}
           <ActivityCard pledge={pledge} />
           <HowCard pledge={pledge} />
         </div>

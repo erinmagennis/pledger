@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "postal-mime": [
+        "../verify/node_modules/postal-mime"
       ]
     }
   },
@@ -36,6 +39,8 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "test",
+    "vitest.config.mjs"
   ]
 }

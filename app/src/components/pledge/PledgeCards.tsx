@@ -62,10 +62,10 @@ export function HelpCard() {
   return (
     <div className="card note sage">
       <span className="ico"><Icon name="undo" /></span>
-      <h2>Want to help?</h2>
-      <p>You can pay claimants directly. Pledger checks each payment and adds it to the log.</p>
+      <h2>Want to help? Pay someone in line directly</h2>
+      <p>Send USDC on Base to anyone waiting. Pledger checks each payment and updates the line.</p>
       <div className="ctas" style={{ marginTop: 18 }}>
-        <Button href="/claim" variant="ghost">See who is in line</Button>
+        <Button href="/claim/line" variant="ghost">Pay someone in line</Button>
       </div>
     </div>
   );
