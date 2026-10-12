@@ -280,3 +280,10 @@ section.gb-sec{padding-top:64px}
  .lc-stats{gap:24px;width:100%}.lc-stats dd{font-size:28px}
  .card.gb-funder{padding:24px 22px}
 }
+
+/* artizen: what happened */
+.gb-happened{margin:12px 0 14px;padding:14px 16px;border-radius:var(--r-sm);background:rgba(255,255,255,.7);border:1px solid var(--line)}
+.gb-happened p{color:var(--soft);font-size:15px;margin-top:6px}
+.gb-happened-k{font-size:13px;font-weight:600;color:var(--ink)!important;margin-top:0!important}
+.gb-happened-link{display:inline-block;margin-top:8px;font-size:14px;font-weight:600;color:var(--accent)}
+.linecard .lc-top{align-items:center}

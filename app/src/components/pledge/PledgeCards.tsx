@@ -83,9 +83,21 @@ export function BackersSection() {
         <article className="gb-invite">
           <span className="ico"><Icon name="plus" /></span>
           <h3>Back it too</h3>
+          <div className="gb-happened">
+            <p className="gb-happened-k">What happened</p>
+            <p>
+              Artizen was a platform for backing creative, science and public goods projects. It promised
+              match funding on every purchase and charged backers a 10% endowment fee. In October 2026 it
+              abruptly shut down. The promised match won&apos;t be paid, and Artizen is keeping the fees.
+            </p>
+            <p>Many creators backed their own projects and planned around that match. They lost both.</p>
+            <a className="gb-happened-link" href="https://payout-progress-artizen.pages.dev/" target="_blank" rel="noopener noreferrer">
+              See the community payout tracker
+            </a>
+          </div>
           <p>
-            Send USDC on Base straight to someone in line. Pledger checks each payment and updates the
-            line. Pledger never holds the money.
+            Send USDC on Base straight to the next people in line. Pledger checks each payment and updates
+            the line. Pledger never holds the money.
           </p>
           <div className="gb-invite-cta">
             <Button href="/claim/line" variant="ghost">Help pay people back</Button>
