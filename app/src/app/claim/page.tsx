@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/Icons";
 import { ClaimFlow } from "@/components/claim/ClaimFlow";
-import { NEXT_UPDATE } from "@/lib/claims";
 
 export const metadata: Metadata = { title: "Claim your Artizen 10% · Pledger" };
 
@@ -32,7 +31,6 @@ export default function ClaimPage() {
             {/* TODO(copy) */}
             <p>A fingerprint of each receipt, the project, date and fee, your wallet and how you want to be shown. Never your email or its contents.</p>
             <div className="mini">
-              <div className="r"><span>Next update</span><span>{NEXT_UPDATE}</span></div>
             </div>
           </div>
         </div>

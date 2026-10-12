@@ -131,7 +131,6 @@ export function ClaimFlow() {
           {address ? shortAddress(address) : "your wallet"} in USDC on Base.
         </p>
         <div className="mini">
-          <div className="r"><span>Next update</span><span>{done.nextUpdate}</span></div>
         </div>
         <div className="ctas" style={{ marginTop: 22 }}>
           <Link className="btn btn-primary" href="/claim/line">

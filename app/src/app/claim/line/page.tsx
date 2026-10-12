@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icons";
 import { LineWithPay } from "@/components/claim/LinePage";
-import { NEXT_UPDATE } from "@/lib/claims";
 
 export const metadata: Metadata = { title: "The line · Artizen give-back · Pledger" };
 
@@ -33,7 +32,6 @@ export default function LinePage() {
             <h2>Every payment is checked</h2>
             <p>Pledger reads each USDC payment on Base before it marks anyone paid.</p>
             <div className="mini">
-              <div className="r"><span>Next update</span><span>{NEXT_UPDATE}</span></div>
             </div>
           </div>
         </div>

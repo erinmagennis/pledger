@@ -2,7 +2,7 @@
 // test-match-pool from Tempo testnet (withLivePool), artizen-give-back from the
 // Supabase line (withLiveLine), and the home tracker from both (computeTotals).
 // Pure: no server imports, safe for client components and tests.
-import { formatCents, NEXT_UPDATE, type LineEntry, type PaymentRecord } from "./claims";
+import { formatCents, type LineEntry, type PaymentRecord } from "./claims";
 
 // Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
 const TEMPO_EXPLORER = "https://explore.testnet.tempo.xyz";
@@ -68,7 +68,7 @@ function lineFields(st: LineStats): Pick<Pledge, "stats" | "cardStats" | "inPlac
     stats: [
       { value: String(st.people), label: "in line" },
       { value: formatCents(st.feesCents), label: "fees claimed" },
-      { value: shortDate(NEXT_UPDATE), label: "next update" },
+      { value: formatCents(st.paidCents), label: "paid so far" },
     ],
     cardStats: [
       { value: String(st.people), label: "in line" },
