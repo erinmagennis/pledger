@@ -79,7 +79,7 @@ export async function checkUsdcPayment(txHash: Hex, to: string, c: PublicClient 
   const block = await c.getBlock({ blockNumber: receipt.blockNumber });
   return {
     ok: true,
-    txHash,
+    txHash: txHash.toLowerCase() as Hex,
     to: getAddress(to).toLowerCase(),
     amountUnits,
     blockNumber: receipt.blockNumber,
