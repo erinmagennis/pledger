@@ -10,7 +10,7 @@ Status: drafted, not applied. Backlog item 2 in `notes/2026-10-12-backlog.md`.
 
 - (b) Custom API key scoped to a custom role: not supported. The API keys page says every key resolves to a built-in role (`anon`, `authenticated`, `service_role`). Secret and publishable keys are not JWTs, so a JWT role claim does not apply to them.
 - (c) RLS keyed on a custom JWT claim with the publishable key: does not isolate the key. The publishable key still maps to `anon`, and Pledger would need to mint signed JWTs, which means holding a project-wide signing secret. Not simpler. (This reading is an inference from the docs, not a documented walkthrough.)
-- (a) Custom Postgres role over a direct connection string: supported. The roles page documents `create role ... with login password` and recommends one role per service. The connecting page documents the custom role username `[ROLE].[PROJECT-REF]` through the shared pooler. Chosen. A leaked credential reaches only the four pledger_ tables.
+- (a) Custom Postgres role over a direct connection string: supported. The roles page documents `create role ... with login password` and recommends one role per service. The connecting page documents the custom role username `[ROLE].[PROJECT-REF]` through the shared pooler. Chosen. A leaked credential reaches only the five pledger_ tables (claims, payments, attestations, holds, faucet_log). The table from sql/006 needs grants too.
 
 Sources:
 - https://supabase.com/docs/guides/database/postgres/roles

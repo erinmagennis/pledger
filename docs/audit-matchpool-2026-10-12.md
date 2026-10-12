@@ -1,5 +1,9 @@
 # MatchPool v1 security audit (2026-10-12)
 
+## Status after fixes (24dd302)
+
+All findings are open for v2. No contract change was made tonight, and the deployed bytecode matches the repo. M-2 would be mitigated in the app only if the UI re-reads previewMatch before signing; it does not yet.
+
 ## Summary for judges
 
 MatchPool is a 135-line, non-upgradeable contract with no owner, no admin keys and no native-coin handling. A sponsor locks stablecoins; each donation is matched up to a per-donor cap and forwarded, donation plus match, to one fixed recipient in the same transaction. The sponsor can take back only the unused remainder, and only after the lock ends. We found no way for anyone to steal funds, redirect funds to a third party, or pull the sponsor's money out early. All 40 Foundry tests pass (including two 1,000-run fuzz suites and re-entrancy tests), the live deployment's state matches the money invariants (pool 460 USD equals the contract's token balance; 500 deposited minus 40 matched), and the deployed runtime bytecode is byte-identical to this repository's build except for the constructor immutables. The real weaknesses are economic, not custodial: the per-donor cap is per address, so anyone with many wallets (including the recipient) can draw down the whole match pool; a donor gets no protection if the pool runs out or the lock ends between seeing a match quote and their transaction landing; and the sponsor address can never be changed, so a lost or blocked sponsor key strands the remainder. None of these put donor or sponsor funds at risk of going anywhere other than the recipient or the sponsor.

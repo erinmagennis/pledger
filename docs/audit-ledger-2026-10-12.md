@@ -2,6 +2,10 @@
 
 Scope: `app/` at commit cb3a7ff (rate limits added mid-audit; re-read and included). Method: state-inconsistency auditor (coupled state map, mutation matrix, parallel paths, journeys, masking code), then code trace for every finding and a vitest PoC for five of them. The PoCs ran from a scratch folder against the real `src/lib` code and `test/fake-db.ts`; no project file was changed. Project suite: 17 files, 139 tests passing.
 
+## Status after fixes (24dd302)
+
+Fixed in commit 24dd302: SI-01, SI-02 (partly: the attestation is retried in place, but there is no EAS lookup before the retry), and SI-03 (stopgap: localStorage replay of a sent transfer). SI-04 to SI-14 are open; see the backlog in `notes/2026-10-12-backlog.md`.
+
 ## Summary
 
 Pledger keeps one money fact in four places: the USDC transfer on Base, the `pledger_payments` row, the derived line (`buildLine`), and the EAS attestation. Only the first is durable without help. A payment that lands on chain becomes a DB row only when a browser or the Stripe webhook asks for it, and the browser keeps that "sent but not recorded" state in memory only. The new 30-per-10-minute limit on `/api/payments/verify` makes this worse: "Help pay" treats a 429 as a final answer and forgets a sent transfer, so a person who was paid stays "owed" and the next helper is sent to them. The public record has the same shape: the "paid" attestation fires once, after the response, and any failure (RPC down, attester not configured, function cut off, a read error) leaves a `pending` row that the unique index from sql/004 then blocks from ever being retried, while the page says "Paid" and the rule card says every payment is recorded on Base. Before sql/004, two valid payments racing for the same person (both stored as `paid`, PoC verified) attest that person twice. No sequence of valid calls produces "paid" with zero counted payment in the DB, but two do produce "owed after being paid" (a sent transfer the server never saw, and a later claim that re-spreads an old payment), and holds can be renewed without limit to push helpers' money past people in line.
