@@ -27,13 +27,13 @@ contract MockTIP20 {
         return true;
     }
 
-    function transfer(address to, uint256 a) external returns (bool) {
+    function transfer(address to, uint256 a) public virtual returns (bool) {
         if (failTransfers) return false;
         _move(msg.sender, to, a);
         return true;
     }
 
-    function transferFrom(address f, address to, uint256 a) external returns (bool) {
+    function transferFrom(address f, address to, uint256 a) public virtual returns (bool) {
         if (failTransfers) return false;
         uint256 al = allowance[f][msg.sender];
         require(al >= a, "allowance");
@@ -42,7 +42,7 @@ contract MockTIP20 {
         return true;
     }
 
-    function transferWithMemo(address to, uint256 a, bytes32 memo) external {
+    function transferWithMemo(address to, uint256 a, bytes32 memo) public virtual {
         _move(msg.sender, to, a);
         emit TransferWithMemo(msg.sender, to, a, memo);
     }
