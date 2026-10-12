@@ -123,7 +123,7 @@ svg.i.sm{width:14px;height:14px}
 .phead.give-back{background:radial-gradient(60% 90% at 90% 10%,var(--butter) 0%,rgba(239,226,180,0) 60%),radial-gradient(50% 80% at 75% 100%,var(--peach) 0%,rgba(243,211,191,0) 60%),linear-gradient(180deg,#fbf8f3,#f4efe6)}
 .phead .meta-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .phead .who{background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px}
-.phead h1{font-size:60px;margin-top:20px;max-width:18ch}
+.phead h1{font-size:60px;margin-top:20px;max-width:22ch;text-wrap:balance}
 .pstats{display:flex;gap:48px;margin-top:32px;flex-wrap:wrap}
 .pstats b{display:block;font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1.05}
 .pstats small{font-size:14px;color:var(--soft)}
@@ -219,7 +219,7 @@ svg.i.sm{width:14px;height:14px}
 
 /* give-back page v3: header, who's backing it, the line, how it works.
    Priority by size: header > line card > backer cards > step cards > quiet cards. */
-.phead .psub{font-size:19px;color:var(--soft);margin-top:18px;max-width:46ch}
+.phead .psub{font-size:19px;color:var(--soft);margin-top:18px;max-width:46ch;text-wrap:pretty}
 .doors{display:flex;gap:28px;margin-top:32px;flex-wrap:wrap}
 .door{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .door-k{font-size:14px;font-weight:600;color:var(--soft)}
