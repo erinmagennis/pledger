@@ -196,6 +196,33 @@ describe("recordUsdcPayment", () => {
     vi.restoreAllMocks();
   });
 
+  it("does not store an extra under $1.00: rejected with the rule message and logged", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const s = setup({ units: 999_999n });
+    expect(await s.run()).toMatchObject({ ok: false, status: 400, error: "Does not match what is owed ($15.00)" });
+    expect(s.tables.pledger_payments).toHaveLength(0);
+    expect(warn).toHaveBeenCalledWith("[pledger] extra not saved", expect.objectContaining({ txHash: TX, reason: "under-minimum" }));
+    warn.mockRestore();
+  });
+
+  it("stores at most 5 extras per person: the 6th is rejected and logged", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const five = Array.from({ length: 5 }, (_, i) => ({ tx_hash: `0x${"e".repeat(63)}${i}`, to_address: A, amount_units: "2000000", block_time: "2026-10-11T00:00:00Z", kind: "extra" }));
+    const s = setup({ payments: five, units: usd(10) });
+    expect(await s.run()).toMatchObject({ ok: false, status: 400, error: "Does not match what is owed ($15.00)" });
+    expect(s.tables.pledger_payments).toHaveLength(5);
+    expect(warn).toHaveBeenCalledWith("[pledger] extra not saved", expect.objectContaining({ txHash: TX, reason: "extras-full" }));
+    warn.mockRestore();
+  });
+
+  it("an outage while saving an extra answers 500, not the rule message", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const s = setup({ units: usd(10), schema: { insertError: { pledger_payments: { code: "08006", message: "connection failure" } } } });
+    expect(await s.run()).toEqual({ ok: false, status: 500, error: "Could not save the payment" });
+    expect(warn).toHaveBeenCalledWith("[pledger] extra not saved", { txHash: TX, code: "08006" });
+    warn.mockRestore();
+  });
+
   it("keeps idempotency: the same tx and person is already recorded", async () => {
     const s = setup();
     expect((await s.run()).ok).toBe(true);

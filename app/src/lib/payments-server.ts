@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Hex } from "viem";
 import { buildLine, centsToUnits, type ClaimRecord, type LineEntry } from "./claims";
 import { SENT_BEFORE, checkPaymentRule, checkUsdcPayment, dollars } from "./base";
-import { CLAIM_COLUMNS, isMissingSchema, loadLine, readPayments } from "./claims-server";
+import { CLAIM_COLUMNS, EXTRAS_PER_ADDRESS, isMissingSchema, loadLine, readPayments } from "./claims-server";
 import { recordClaims, type RecordInput } from "./eas";
 
 export const PAYMENT_REASONS: Record<string, string> = {
@@ -17,6 +17,8 @@ export const PAYMENT_REASONS: Record<string, string> = {
 };
 
 const ALREADY = "This payment is already recorded";
+/** Smallest extra that is stored: $1.00 in USDC units. */
+export const MIN_EXTRA_UNITS = 1_000_000n;
 /** Shown when one tx pays several people before sql/003_pledger_payments_per_recipient.sql has run. */
 export const NEEDS_003 = "Batch payments need the 003 update";
 
@@ -77,11 +79,22 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
     // Sent before the claim stays rejected. A wrong amount is stored as an extra (sql/005), shown on the
     // person's row and never counted. Before 005 the insert fails on the unknown column: reject as before.
     if (rule.error === SENT_BEFORE) return { ok: false, status: 400, error: rule.error };
+    // Dust and floods: an extra under $1.00, or past 5 per person, is turned away (and logged), not stored.
+    if (checked.amountUnits < MIN_EXTRA_UNITS) {
+      console.warn("[pledger] extra not saved", { txHash: checked.txHash, to, reason: "under-minimum" });
+      return { ok: false, status: 400, error: rule.error };
+    }
+    if (before.filter((p) => p.kind === "extra").length >= EXTRAS_PER_ADDRESS) {
+      console.warn("[pledger] extra not saved", { txHash: checked.txHash, to, reason: "extras-full" });
+      return { ok: false, status: 400, error: rule.error };
+    }
     const extra = await db.from("pledger_payments").insert({ ...row(checked), kind: "extra" });
     if (extra.error) {
       if (extra.error.code === "23505") return duplicateOrNeeds003(db, checked.txHash, checked.to);
-      if (!isMissingSchema(extra.error)) console.warn("[pledger] extra not saved", { txHash: checked.txHash, code: extra.error.code });
-      return { ok: false, status: 400, error: rule.error };
+      // Before sql/005 the unknown column fails: reject as before. Anything else is an outage.
+      if (isMissingSchema(extra.error)) return { ok: false, status: 400, error: rule.error };
+      console.warn("[pledger] extra not saved", { txHash: checked.txHash, code: extra.error.code });
+      return { ok: false, status: 500, error: "Could not save the payment" };
     }
     const line = await loadLine(db).catch(() => []);
     const pid = linesBefore[0]?.pid;

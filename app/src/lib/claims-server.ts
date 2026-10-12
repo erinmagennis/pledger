@@ -1,6 +1,6 @@
 // Server-only claim pipeline: verify uploaded .eml files, pair self-backing, mark duplicates.
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { HOLD_MS, buildLine, friendlyReason, markHeld, markUnclaimable, parseExcludedHashes, toCents, MAX_FILES, type ClaimRecord, type LineEntry, type PaymentRecord, type HoldSource, type ReviewRow } from "./claims";
 import { verifyArtizenEmail, pairSelfBacked, MAX_BYTES, type Result as VerifyResult } from "./verify";
@@ -89,27 +89,56 @@ export function publicRow(r: CheckedRow): ReviewRow {
 
 export const CLAIM_COLUMNS = "id,fingerprint,project,purchased_at,fee_cents,self_backed,payout_address,display_mode,display_name,created_at";
 
+const MISSING_SCHEMA_CODES = ["PGRST204", "PGRST205", "42703", "42P01"];
+
 /** True when an error means sql/005 (or a later file) has not run yet: a table or column is missing.
- * PostgREST answers PGRST204 (column) or PGRST205 (table); Postgres itself answers 42703 or 42P01. */
-export function isMissingSchema(error: { code?: string; message?: string } | null | undefined): boolean {
-  if (!error) return false;
-  if (["PGRST204", "PGRST205", "42703", "42P01"].includes(error.code ?? "")) return true;
-  return /schema cache|does not exist/i.test(error.message ?? "");
+ * PostgREST answers PGRST204 (column) or PGRST205 (table); Postgres itself answers 42703 or 42P01.
+ * Codes only: a message match could turn a real outage into "not set up yet". */
+export function isMissingSchema(error: { code?: string } | null | undefined): boolean {
+  return !!error && MISSING_SCHEMA_CODES.includes(error.code ?? "");
 }
 
-/** Stored payments, paid and extra. `select *` works before and after sql/005 adds `kind`. */
+/** Newest extras read at most, across everyone, and kept per person. Extras are shown, never counted. */
+export const EXTRAS_READ_LIMIT = 200;
+export const EXTRAS_PER_ADDRESS = 5;
+
+const toPayment = (p: Record<string, unknown>): PaymentRecord => ({
+  tx_hash: String(p.tx_hash),
+  to_address: String(p.to_address),
+  amount_units: p.amount_units as string | number,
+  block_time: String(p.block_time),
+  kind: p.kind === "extra" ? "extra" : "paid",
+});
+
+/** Stored payments: counted ones (oldest first, up to 5000), then the newest extras (at most 5 per person).
+ * Two queries, so extras can never push counted payments out of the read. Before sql/005 there is no
+ * `kind` column: every row is counted and there are no extras. */
 export async function readPayments(db: SupabaseClient, to?: string): Promise<PaymentRecord[]> {
+  const base = () => {
+    const q = db.from("pledger_payments").select("*");
+    return to ? q.eq("to_address", to) : q;
+  };
   // Supabase returns 1000 rows by default; ask for up to 5000.
-  const q = db.from("pledger_payments").select("*");
-  const r = await (to ? q.eq("to_address", to) : q).range(0, 4999);
-  if (r.error) throw new Error("db-read-failed");
-  return ((r.data ?? []) as Record<string, unknown>[]).map((p) => ({
-    tx_hash: String(p.tx_hash),
-    to_address: String(p.to_address),
-    amount_units: p.amount_units as string | number,
-    block_time: String(p.block_time),
-    kind: p.kind === "extra" ? "extra" : "paid",
-  }));
+  let paid = await base().eq("kind", "paid").order("block_time", { ascending: true }).range(0, 4999);
+  const before005 = isMissingSchema(paid.error);
+  if (before005) paid = await base().order("block_time", { ascending: true }).range(0, 4999);
+  if (paid.error) throw new Error("db-read-failed");
+  const counted = ((paid.data ?? []) as Record<string, unknown>[]).map(toPayment);
+  if (before005) return counted;
+
+  const ex = await base().eq("kind", "extra").order("block_time", { ascending: false }).limit(EXTRAS_READ_LIMIT);
+  if (ex.error) {
+    if (isMissingSchema(ex.error)) return counted;
+    throw new Error("db-read-failed");
+  }
+  const perAddress = new Map<string, number>();
+  const extras = ((ex.data ?? []) as Record<string, unknown>[]).map(toPayment).filter((p) => {
+    const a = p.to_address.toLowerCase();
+    const n = perAddress.get(a) ?? 0;
+    perAddress.set(a, n + 1);
+    return n < EXTRAS_PER_ADDRESS;
+  });
+  return [...counted, ...extras];
 }
 
 async function readClaims(db: SupabaseClient): Promise<ClaimRecord[]> {
@@ -150,16 +179,39 @@ export async function loadLineWithHolds(db: SupabaseClient, now = Date.now()): P
   return markHeld(buildLine(claims, pays), addressOf, holds);
 }
 
-export type HoldResult = { ok: true; until: string } | { ok: false; missing: true } | { ok: false; missing?: false; error: string };
+export type HoldResult =
+  | { ok: true; until: string; ids: Map<string, string> }
+  | { ok: false; missing: true }
+  | { ok: false; missing?: false; error: string };
 
-/** Hold these payout addresses for HOLD_MS. A new row per call; the latest expiry wins, so this also refreshes. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Hold these payout addresses for HOLD_MS. A new row per call; the latest expiry wins, so this also refreshes.
+ * `ids` maps each address to its new row id, so the caller can end exactly these holds later.
+ * Rows that ended over a day ago are cleared first (best effort). */
 export async function createHolds(db: SupabaseClient, addresses: string[], source: HoldSource, now = Date.now()): Promise<HoldResult> {
   const until = new Date(now + HOLD_MS).toISOString();
-  const rows = [...new Set(addresses.map((a) => a.toLowerCase()))].map((payout_address) => ({ payout_address, expires_at: until, source }));
+  const rows = [...new Set(addresses.map((a) => a.toLowerCase()))].map((payout_address) => ({ id: randomUUID(), payout_address, expires_at: until, source }));
   if (!rows.length) return { ok: false, error: "Unknown person" };
+  try {
+    await db.from("pledger_holds").delete().lt("expires_at", new Date(now - DAY_MS).toISOString());
+  } catch {
+    // Cleanup only; a failure here never blocks a hold.
+  }
   const r = await db.from("pledger_holds").insert(rows);
   if (r.error) return isMissingSchema(r.error) ? { ok: false, missing: true } : { ok: false, error: "Could not hold" };
-  return { ok: true, until };
+  return { ok: true, until, ids: new Map(rows.map((x) => [x.payout_address, x.id])) };
+}
+
+/** End these hold rows now (best effort): used when one IP holds more people than it may. */
+export async function endHolds(db: SupabaseClient, ids: string[], now = Date.now()): Promise<void> {
+  if (!ids.length) return;
+  try {
+    const r = await db.from("pledger_holds").update({ expires_at: new Date(now).toISOString() }).in("id", ids);
+    if (r.error && !isMissingSchema(r.error)) console.warn("[pledger] hold end failed", { code: r.error.code });
+  } catch {
+    // Holds are a courtesy; nothing to do.
+  }
 }
 
 export async function loadLine(db: SupabaseClient) {

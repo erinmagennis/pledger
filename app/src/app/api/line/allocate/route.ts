@@ -16,6 +16,8 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
  * Returns full payout addresses (looked up here, never stored in the public line).
  * People held by another helper are skipped. `mine` lists the pids this helper holds, so their own
  * hold (made by the preview) does not hide those people from them.
+ * Fail open: if more than half of the open people are held, holds are ignored for this split
+ * (`holdsIgnored: true`), so a flood of holds can never empty "Help pay people back".
  */
 export async function POST(req: Request) {
   const db = getSupabase();
@@ -51,12 +53,16 @@ export async function POST(req: Request) {
     // Same test as owedUnits: a paid entry (including a forgiven one) owes nothing.
     const open = line.filter((e) => e.status !== "paid" && e.feeCents > e.paidCents);
     const addresses = await payoutAddressesFor(db, open.map((e) => e.pid));
-    const entries: AllocEntry[] = open.flatMap((e) => {
+    const found: AllocEntry[] = open.flatMap((e) => {
       const address = addresses.get(e.pid);
       if (!address) return [];
       const held = !!e.held && !mine.has(e.pid);
       return [{ entryId: `${e.pid}-${e.group}`, pid: e.pid, address, label: e.label, place: e.place, remainingUnits: centsToUnits(e.feeCents - e.paidCents), held }];
     });
+    const people = new Set(found.map((e) => e.pid)).size;
+    const heldPeople = new Set(found.filter((e) => e.held).map((e) => e.pid)).size;
+    const holdsIgnored = heldPeople * 2 > people;
+    const entries = holdsIgnored ? found.map((e) => ({ ...e, held: false })) : found;
     const r = allocate(entries, mode);
     return NextResponse.json({
       transfers: r.transfers.map((t) => ({
@@ -74,7 +80,9 @@ export async function POST(req: Request) {
       nextCents: unitsToCents(r.nextUnits),
       requestedCents,
       /** People skipped because someone else is paying them right now. */
-      heldCount: new Set(entries.filter((e) => e.held).map((e) => e.pid)).size,
+      heldCount: holdsIgnored ? 0 : heldPeople,
+      /** True when more than half of the open people were held, so holds were not applied. */
+      holdsIgnored,
     });
   } catch {
     return bad("Could not load the line", 500);

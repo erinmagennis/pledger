@@ -19,6 +19,9 @@ alter table public.pledger_holds enable row level security;
 create index if not exists pledger_holds_address_expires_idx
   on public.pledger_holds (payout_address, expires_at);
 
+-- The app clears holds that ended over a day ago before it adds new ones; this keeps that quick.
+create index if not exists pledger_holds_expires_idx on public.pledger_holds (expires_at);
+
 -- Step 2: extras. A real payment that passes the Base check but not the amount rule (too much,
 -- too little, or to someone who owes nothing) is stored with kind = 'extra'. Extras never count
 -- toward paid, owed, totals or public records. Every existing row becomes kind = 'paid'.

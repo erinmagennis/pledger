@@ -14,7 +14,8 @@ export type HoldAnswer = { held: boolean; until?: string };
 
 /** Hold people for 10 minutes (or refresh their hold). Never throws. held: false before sql/005 or on any error. */
 export async function hold(pids: string[], source: HoldSource): Promise<HoldAnswer> {
-  const ids = [...new Set(pids)].filter(Boolean).slice(0, 50);
+  // The server holds up to 10 people per request (and per IP); a bigger split holds its first 10.
+  const ids = [...new Set(pids)].filter(Boolean).slice(0, 10);
   if (!ids.length) return { held: false };
   try {
     const res = await fetch("/api/line/hold", {
