@@ -16,6 +16,12 @@ In progress:
 - The web app at pledger.impacthook.org: live pledges, a test match pool anyone can try with free test money, and the first real pledge.
 - The first real pledge is a give-back. People who paid Artizen's 10% endowment fee can claim it back from half of the builder's winnings. Claims are checked automatically from the signature on Artizen's receipt emails (DKIM), so nobody uploads screenshots. Each receipt can be claimed once. Payments go out on Base, inside Pledger or directly from any wallet, and Pledger checks each one on chain. Verified claims and payments are recorded publicly with EAS attestations on Base.
 
+## For judges
+
+- What is tested and how: `docs/TESTING.md`. Edge cases and how each is handled: `docs/edge-cases.md`.
+- Run the contract tests: `cd contracts && forge test` (40 tests).
+- The design the app is built from: `design/home-v3.png`.
+
 ## Related projects
 
 Designed to be compatible with two earlier projects by the same builder: ImpactHook (milestone-gated funding on EVM) and Pantheon (AI committees that issue signed verdicts).
