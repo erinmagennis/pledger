@@ -1,5 +1,6 @@
 // Pledge data for the app.
-// TODO(data): everything here is SAMPLE DATA copied from design/home-v3.html.
+// TODO(data): everything here is SAMPLE DATA copied from design/home-v3.html,
+// except test-match-pool, which is live from Tempo testnet (withLivePool).
 // Wire to Tempo (MatchPool contract reads) and Supabase (claims, activity log)
 // before launch. Keep the exported types stable so pages do not change.
 
@@ -7,7 +8,7 @@ export type PledgeKind = "matching" | "prize" | "give-back";
 export type Chain = "Tempo testnet" | "Base";
 
 export type Stat = { value: string; label: string };
-export type ActivityEntry = { date: string; text: string; amount?: string };
+export type ActivityEntry = { date: string; text: string; amount?: string; href?: string };
 export type InPlaceRow = { label: string; value: string; ok?: boolean };
 
 export type Pledge = {
@@ -34,36 +35,32 @@ export const KIND_LABEL: Record<PledgeKind, string> = {
 
 const pledges: Pledge[] = [
   {
+    // Static facts only. Live numbers and activity come from Tempo via
+    // withLivePool() below (see src/lib/tempo.ts readPool()).
     slug: "test-match-pool",
     kind: "matching",
     title: "Test match pool",
     by: { name: "Pledger demo", initials: "PL" },
     chain: "Tempo testnet",
     stats: [
-      { value: "$500", label: "in place" },
-      { value: "$120", label: "matched" },
+      { value: "$500", label: "put in place" },
+      { value: "1:1", label: "match, up to $20 each" },
       { value: "31 Dec", label: "in place until" },
     ],
-    progress: 0.24,
     inPlace: [
-      { label: "Match in place", value: "$500", ok: true },
+      { label: "Match put in place", value: "$500", ok: true },
+      { label: "Match rule", value: "1:1, up to $20 per wallet" },
       { label: "In place until", value: "31 December 2026" },
-      { label: "Matched so far", value: "$120" },
-      { label: "Left to match", value: "$380" },
+      { label: "Goes to", value: "Demo project" },
       { label: "Chain", value: "Tempo testnet" },
     ],
-    activity: [
-      { date: "12 Oct 2026", text: "Donation matched for A. O.", amount: "$40" },
-      { date: "10 Oct 2026", text: "Donation matched for M. R.", amount: "$50" },
-      { date: "8 Oct 2026", text: "Donation matched for T. P.", amount: "$30" },
-      { date: "6 Oct 2026", text: "Match of $500 put in place", amount: "$500" },
-    ],
+    activity: [],
     howItWorks: [
       "The $500 match is locked until 31 December 2026. It cannot be taken back before then.",
-      "Each donation is matched up to a set ratio and a cap per donor.",
-      "Donation and match go to the recipient together, with a receipt.",
+      "Each donation is matched 1:1, up to $20 per wallet.",
+      "Donation and match go to Demo project together, in the same transaction.",
     ],
-    action: { label: "Try it with test money", href: "/claim" },
+    action: { label: "Try it with test money", href: "#try" },
   },
   {
     slug: "artizen-give-back",
@@ -94,6 +91,62 @@ const pledges: Pledge[] = [
     action: { label: "Check or add your claim", href: "/claim" },
   },
 ];
+
+/** Live pool numbers for the test match pool (shape of /api/pools/test-match-pool). */
+export type LivePool = {
+  pool: string;
+  totalDonated: string;
+  totalMatched: string;
+  totalDeposited: string;
+  donationCount: number;
+  poolUnits: string;
+  depositedUnits: string;
+  events: { kind: "donated" | "deposited"; tx: string; time: number; who: string; amount: string; match?: string }[];
+};
+
+const TX_URL = "https://explore.testnet.tempo.xyz/tx/";
+
+function dateLabel(unix: number): string {
+  return new Date(unix * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+function shortWho(a: string): string {
+  return a.slice(0, 6) + "…" + a.slice(-4);
+}
+
+/** Merge live Tempo data into the test match pool pledge. */
+export function withLivePool(pledge: Pledge, live: LivePool): Pledge {
+  const deposited = Number(live.depositedUnits);
+  const left = Number(live.poolUnits);
+  const progress = deposited > 0 ? Math.min(1, Math.max(0, (deposited - left) / deposited)) : undefined;
+  return {
+    ...pledge,
+    stats: [
+      { value: live.pool, label: "left to match" },
+      { value: live.totalMatched, label: "matched" },
+      { value: "31 Dec", label: "in place until" },
+    ],
+    progress,
+    inPlace: [
+      { label: "Pool left", value: live.pool, ok: true },
+      { label: "Matched so far", value: live.totalMatched },
+      { label: "Donated so far", value: live.totalDonated },
+      { label: "Donations", value: String(live.donationCount) },
+      { label: "In place until", value: "31 December 2026" },
+      { label: "Chain", value: "Tempo testnet" },
+    ],
+    activity: live.events.map((e) =>
+      e.kind === "deposited"
+        ? { date: dateLabel(e.time), text: `Match of ${e.amount} put in place`, amount: e.amount, href: TX_URL + e.tx }
+        : {
+            date: dateLabel(e.time),
+            text: e.match === "$0" ? `${shortWho(e.who)} gave ${e.amount}, match used up` : `${shortWho(e.who)} gave ${e.amount}, matched ${e.match}`,
+            amount: e.amount,
+            href: TX_URL + e.tx,
+          },
+    ),
+  };
+}
 
 export function getPledges(): Pledge[] {
   return pledges;

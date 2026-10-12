@@ -161,3 +161,38 @@ svg.i.sm{width:14px;height:14px}
  .pcol.side{order:-1}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* demo: Try it on the test match pool (src/components/demo) */
+.try button.btn{border:0;cursor:pointer;font:inherit;font-weight:600}
+.try button.btn-ghost{border:1px solid var(--line);padding:12px 20px}
+.try-sub{color:var(--soft);margin-top:8px;max-width:46ch}
+.try .ctas{margin-top:22px}
+.try-steps{list-style:none;padding:0;margin-top:20px;display:grid;gap:10px}
+.try-steps li{display:flex;align-items:center;gap:12px;font-size:16px;color:var(--faint)}
+.try-steps li i{width:12px;height:12px;border-radius:50%;border:1.5px solid rgba(28,31,29,.2);flex:none}
+.try-steps li.now{color:var(--ink)}
+.try-steps li.now i{border-color:#3f9d6b;background:#3f9d6b;box-shadow:0 0 0 4px rgba(63,157,107,.18);animation:trypulse 1.4s ease-in-out infinite}
+.try-steps li.done{color:var(--ink)}
+.try-steps li.done i{border-color:var(--accent);background:var(--accent)}
+@keyframes trypulse{50%{box-shadow:0 0 0 7px rgba(63,157,107,.08)}}
+.try-amounts{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+.try-amounts button{font:inherit;font-weight:600;font-size:17px;padding:10px 22px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.try-amounts button.on{background:var(--sage-soft);border-color:var(--thread);color:var(--accent)}
+.try-amounts button:focus-visible,.try button.btn:focus-visible,.demo-tx:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.try-result{margin-top:22px;padding:20px 22px;font-size:16px}
+.try-result p{line-height:1.5}
+.try-result b{font-weight:600}
+.try-proof{display:flex;align-items:center;gap:8px;color:#2f7a52;font-size:14px;margin-top:10px}
+.try-note{color:var(--soft);font-size:14px;margin-top:8px}
+.try-links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:14px}
+.try-links a,.demo-src a{color:var(--accent);font-weight:600;text-underline-offset:3px}
+.try-result .ctas{margin-top:16px}
+.try-error{margin-top:18px}
+.try-error p{color:#8a4b2b;background:var(--peach-soft);border-radius:var(--r-sm);padding:12px 14px;font-size:15px}
+.try-error .ctas{margin-top:14px}
+.demo-tx{text-decoration:none;min-width:0;overflow-wrap:anywhere}
+.demo-tx:hover{text-decoration:underline;text-underline-offset:3px}
+.demo-empty{color:var(--soft);margin-top:12px}
+.demo-src{color:var(--faint);font-size:13px;margin-top:14px}
+@media(max-width:900px){.try-amounts button{flex:1;padding:10px 0}}
+@media(prefers-reduced-motion:reduce){.try-steps li.now i{animation:none}}
