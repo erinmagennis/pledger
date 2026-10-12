@@ -57,4 +57,7 @@ Two fingerprint bugs found and fixed while testing:
 | 2026-10-12 | "Try it" end to end in a browser: test money, fee-free donation, match, result card, activity log | Matched gifts and a "match used up" case, all confirmed on Tempo testnet |
 | 2026-10-12 | Live receipt check with the database connected: a real buyer receipt plus its "You sold" email | Signatures valid; the pledge owner's receipt is correctly excluded from the line |
 
+| 2026-10-12 | Crawled every internal link on the home, Artizen, line and make pages | All return 200 |
+| 2026-10-12 | Help by amount: allocation tests (exact fill, partial last person, more than owed, skip paid, same wallet merged, next N people) | 10 passed; live route answers with the real (empty) line |
+
 Not yet exercised end to end on the live site: a full claim submission signed by a wallet (needs a receipt from someone other than the pledge owner), a real Base payment check, public records (needs the records wallet), and card payments (needs Stripe approval).
