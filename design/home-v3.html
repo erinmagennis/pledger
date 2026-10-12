@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pledger home v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#f6f4ef;--card:#ffffff;--ink:#1c1f1d;--soft:#5d625e;--faint:#8a8f8b;
+  --line:rgba(28,31,29,.09);--accent:#1f4d3a;--accent-2:#2c6a50;
+  --peach:#f3d3bf;--peach-soft:#fbede4;--sage:#cddbc6;--sage-soft:#eaf1e6;--butter:#efe2b4;--butter-soft:#f8f2dc;
+  --thread:#93aa8e;
+  --r-lg:28px;--r-md:20px;--r-sm:12px;
+  --shadow:0 1px 2px rgba(28,31,29,.04),0 8px 24px -8px rgba(28,31,29,.10),0 24px 48px -24px rgba(28,31,29,.10);
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--ground);color:var(--ink);font-family:"Source Sans 3",system-ui,sans-serif;font-size:17px;line-height:1.55;overflow-x:hidden}
+em{font-family:Newsreader,Georgia,serif;font-weight:400}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px;position:relative}
+
+/* nav */
+nav{display:flex;justify-content:space-between;align-items:center;padding:22px 0;position:relative;z-index:3}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700;font-size:20px;letter-spacing:-.02em}
+.mark{width:32px;height:32px;border-radius:10px;background:var(--accent);position:relative;overflow:hidden;flex:none}
+.mark::before{content:"";position:absolute;left:7px;top:7px;width:6px;height:18px;border-radius:3px;background:#f6f4ef}
+.mark::after{content:"";position:absolute;right:6px;top:7px;width:12px;height:12px;border-radius:50%;background:var(--peach)}
+.links{display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.7);border:1px solid var(--line);padding:5px;border-radius:999px;backdrop-filter:blur(8px)}
+.links a{text-decoration:none;font-size:15px;color:var(--soft);padding:7px 14px;border-radius:999px}
+.links a:hover{background:var(--ground);color:var(--ink)}
+.navr{display:flex;gap:12px;align-items:center}
+.lang{font-size:14px;color:var(--soft);display:flex;align-items:center;gap:6px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:10px;border-radius:999px;font-weight:600;text-decoration:none;font-size:16px;transition:transform .15s ease,box-shadow .15s ease}
+.btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;padding:12px 14px 12px 22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 16px -6px rgba(31,77,58,.55)}
+.btn-primary .arr{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 10px 22px -8px rgba(31,77,58,.6)}
+.btn-ghost{background:var(--card);border:1px solid var(--line);padding:13px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.btn-sm{padding:8px 10px 8px 16px;font-size:15px}.btn-sm .arr{width:22px;height:22px}
+
+/* hero panel */
+.hero{position:relative;border-radius:var(--r-lg);padding:72px 64px 64px;margin-top:8px;overflow:hidden;
+  background:radial-gradient(60% 80% at 85% 20%,var(--peach) 0%,rgba(243,211,191,0) 60%),radial-gradient(50% 70% at 70% 95%,var(--sage) 0%,rgba(205,219,198,0) 60%),linear-gradient(180deg,#fbf8f3,#f4efe6);
+  display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center;box-shadow:inset 0 0 0 1px var(--line)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 8px;font-size:14px;color:var(--soft)}
+.live{width:8px;height:8px;border-radius:50%;background:#3f9d6b;box-shadow:0 0 0 4px rgba(63,157,107,.18)}
+h1{font-size:76px;line-height:1;letter-spacing:-.035em;font-weight:600;margin-top:22px}
+h1 em{font-weight:500}
+.sub{font-size:21px;color:var(--soft);margin-top:22px;max-width:31ch}
+.ctas{margin-top:34px;display:flex;gap:12px;flex-wrap:wrap}
+.stage{position:relative;min-height:380px}
+.artslot{position:absolute;inset:0 0 40px 30px;border-radius:50%;display:grid;place-items:center;color:var(--faint);font-size:13px;border:1.5px dashed rgba(28,31,29,.15)}
+.float{position:absolute;background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow);padding:18px 20px}
+.f1{left:0;bottom:0;width:300px}
+.f1 .row{display:flex;justify-content:space-between;align-items:center}
+.f1 .t{font-weight:600}
+.chip{font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px}
+.chip.m{background:var(--peach-soft);color:#8a4b2b}.chip.p{background:var(--sage-soft);color:#2f5a3e}.chip.g{background:var(--butter-soft);color:#7a6420}
+.f1 .amt{font-size:30px;font-weight:600;letter-spacing:-.02em;margin-top:10px}
+.f1 .amt span{font-size:15px;color:var(--soft);font-weight:400}
+.bar{height:8px;border-radius:99px;background:var(--ground);margin-top:12px;overflow:hidden}.bar i{display:block;height:100%;width:24%;background:linear-gradient(90deg,var(--sage),var(--thread));border-radius:99px}
+.f1 .meta{display:flex;justify-content:space-between;font-size:13px;color:var(--soft);margin-top:8px}
+.f2{right:0;top:10px;display:flex;align-items:center;gap:12px;padding:12px 16px 12px 12px}
+.f2 .ic{width:36px;height:36px;border-radius:50%;background:var(--sage-soft);display:grid;place-items:center;color:var(--accent)}
+.f2 b{font-weight:600;font-size:15px;display:block}.f2 small{color:var(--soft);font-size:13px}
+
+/* bento */
+section{padding-top:28px;position:relative;z-index:1}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.card{background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow);padding:30px}
+.tracker{grid-column:span 1;display:flex;flex-direction:column}
+.k{font-size:14px;color:var(--soft);display:flex;align-items:center;gap:8px}
+.big{font-size:64px;font-weight:600;letter-spacing:-.04em;line-height:1.05;margin-top:10px}
+.ppl{display:flex;align-items:center;gap:10px;margin-top:10px}.stack{display:flex}.stack .av{margin-right:-8px;border:2px solid #fff;width:28px;height:28px}.ppl .k{margin-left:12px}.spark{width:100%;height:90px;margin-top:22px}.seg{display:flex;gap:3px;height:8px;margin-top:18px}.seg i{border-radius:99px}.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--soft)}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.feed{margin-top:auto;padding-top:22px;border-top:1px solid var(--line);display:grid;gap:12px}
+.feed div{display:flex;justify-content:space-between;font-size:14.5px}
+.feed span:last-child{color:var(--faint)}
+.av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;margin-right:8px;vertical-align:middle}
+
+.kinds{grid-column:span 2;display:grid;grid-template-columns:1.25fr 1fr;grid-template-rows:1fr 1fr;gap:20px;padding:0;background:none;box-shadow:none}
+.kind{border-radius:var(--r-md);padding:28px;position:relative;overflow:hidden}
+.kind h3{font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:14px}
+.kind p{color:var(--soft);margin-top:6px;max-width:30ch}
+.kind .ico{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.75);display:grid;place-items:center}
+.k1{grid-row:span 2;background:linear-gradient(160deg,var(--peach-soft),#fff 70%);box-shadow:var(--shadow)}
+.k2{background:linear-gradient(160deg,var(--sage-soft),#fff 80%);box-shadow:var(--shadow)}
+.k3{background:linear-gradient(160deg,var(--butter-soft),#fff 80%);box-shadow:var(--shadow)}
+.mini{margin-top:26px;background:#fff;border-radius:var(--r-sm);box-shadow:0 1px 2px rgba(0,0,0,.05),0 6px 16px -10px rgba(0,0,0,.2);padding:14px 16px;font-size:14px}
+.mini .r{display:flex;justify-content:space-between;padding:6px 0}
+.mini .r+.r{border-top:1px solid var(--line)}
+.mini .ok{color:#2f7a52;font-weight:600}
+
+/* how it works band */
+.band{margin-top:28px;border-radius:var(--r-lg);background:var(--accent);color:#eef3ec;padding:64px;position:relative;overflow:hidden}
+.band::after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(closest-side,rgba(243,211,191,.35),transparent)}
+.band h2{font-size:40px;line-height:1.15;letter-spacing:-.02em;font-weight:600}.band h2 span{display:block}
+.band h2 em{color:var(--peach)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;position:relative;z-index:1}
+.step{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-md);padding:24px}
+.step .n{font-family:Newsreader,Georgia,serif;font-style:italic;font-size:30px;color:var(--peach)}
+.step p{margin-top:8px;font-size:18px;color:#e4ebe2}
+
+/* live pledges */
+.head{display:flex;justify-content:space-between;align-items:end;margin:72px 0 20px}
+.head h2{font-size:34px;letter-spacing:-.02em;font-weight:600}
+.pledges{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pl{background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow);padding:26px;text-decoration:none;display:flex;flex-direction:column;gap:14px;transition:transform .15s ease}
+.pl:hover{transform:translateY(-2px)}
+.pl .top{display:flex;justify-content:space-between;align-items:center}
+.who{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--soft)}
+.pl h3{font-size:24px;font-weight:600;letter-spacing:-.015em}
+.stats{display:flex;gap:28px;padding-top:14px;border-top:1px solid var(--line)}
+.stats b{display:block;font-size:20px;font-weight:600}.stats small{font-size:13px;color:var(--soft)}
+.go{margin-top:auto;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:6px}
+
+/* footer */
+.ground{margin-top:96px;height:200px;border-radius:var(--r-lg) var(--r-lg) 0 0;background:linear-gradient(180deg,rgba(205,219,198,0),rgba(205,219,198,.45));display:grid;place-items:center;color:var(--faint);font-size:13px;border-bottom:1.5px solid var(--thread)}
+footer{display:flex;justify-content:space-between;align-items:center;padding:24px 0 48px;color:var(--soft);font-size:14px}
+.sample{border:1px solid var(--line);padding:3px 8px;border-radius:6px;background:#fff}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+@media(max-width:900px){
+ .wrap{padding:0 16px}.links{display:none}
+ .hero{grid-template-columns:1fr;padding:36px 22px 28px}.stage{min-height:340px}
+ h1{font-size:50px}.sub{font-size:19px}
+ .grid,.kinds,.pledges,.steps{grid-template-columns:1fr}.kinds{grid-column:auto;grid-template-rows:auto}.k1{grid-row:auto}
+ .band{padding:36px 22px}.band h2{font-size:30px}.big{font-size:52px}
+ .f1{width:min(300px,100%)}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+<symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="heart" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 12 5a5.5 5.5 0 0 0-10 3.5c0 2.3 1.5 4 3 5.5l7 7Z"/></symbol>
+<symbol id="trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2-1.2.5-2 2-2 3.8M14 14.7V17c0 .6.5 1 1 1.2 1.2.5 2 2 2 3.8M18 2H6v7a6 6 0 0 0 12 0Z"/></symbol>
+<symbol id="undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+<symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
+</defs></svg>
+<div class="wrap">
+<nav>
+ <a class="logo" href="#"><span class="mark"></span>Pledger</a>
+ <div class="links"><a href="#">Pledges</a><a href="#">How it works</a><a href="#">For funders</a></div>
+ <div class="navr"><span class="lang"><svg class="i"><use href="#globe"/></svg>EN</span><a class="btn btn-primary btn-sm" href="#">Make a pledge<span class="arr"><svg class="i" style="width:14px;height:14px"><use href="#arrow"/></svg></span></a></div>
+</nav>
+
+<header class="hero">
+ <div>
+  <span class="eyebrow"><span class="live"></span>Every payment checked on chain</span>
+  <h1>Pledges you can <em>trust</em>.</h1>
+  <p class="sub">See the money behind every pledge, and know when it lands.</p>
+  <div class="ctas"><a class="btn btn-primary" href="#">Make a pledge<span class="arr"><svg class="i"><use href="#arrow"/></svg></span></a><a class="btn btn-ghost" href="#live">See live pledges</a></div>
+ </div>
+ <div class="stage">
+  <div class="artslot">Hero art (Higgsfield)</div>
+  <div class="float f2"><span class="ic"><svg class="i"><use href="#check"/></svg></span><div><b>$25 sent to M. R.</b><small>2 hours ago · checked</small></div></div>
+  <div class="float f1">
+   <div class="row"><span class="t">Test match pool</span><span class="chip m">Matching</span></div>
+   <div class="amt">$500 <span>in place until 1 Nov</span></div>
+   <div class="bar"><i></i></div>
+   <div class="meta"><span>$120 matched</span><span>$380 left</span></div>
+  </div>
+ </div>
+</header>
+
+<section class="grid">
+ <div class="card tracker">
+  <span class="k"><span class="live"></span>Paid out through Pledger</span>
+  <div class="big">$2,340</div>
+  <div class="ppl"><span class="stack"><span class="av" style="background:var(--peach-soft)">MR</span><span class="av" style="background:var(--sage-soft)">AO</span><span class="av" style="background:var(--butter-soft)">TP</span><span class="av" style="background:#eee">+28</span></span><span class="k">31 people paid</span></div>
+  <svg class="spark" viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#cddbc6"/><stop offset="1" stop-color="#cddbc6" stop-opacity="0"/></linearGradient></defs><path d="M0 86 L30 84 L60 80 L90 78 L120 70 L150 66 L180 52 L210 46 L240 30 L270 22 L300 8 L300 90 L0 90Z" fill="url(#g)"/><path d="M0 86 L30 84 L60 80 L90 78 L120 70 L150 66 L180 52 L210 46 L240 30 L270 22 L300 8" fill="none" stroke="#5f8a66" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="300" cy="8" r="4" fill="#1f4d3a"/></svg>
+  <div class="seg"><i style="flex:5;background:var(--peach)"></i><i style="flex:3;background:var(--sage)"></i><i style="flex:2;background:var(--butter)"></i></div>
+  <div class="legend"><span><i style="background:var(--peach)"></i>Matching $1,170</span><span><i style="background:var(--sage)"></i>Prizes $700</span><span><i style="background:var(--butter)"></i>Give-backs $470</span></div>
+ </div>
+ <div class="kinds">
+  <div class="kind k1"><span class="ico"><svg class="i"><use href="#heart"/></svg></span><h3>Matching funds</h3><p>For companies, funds and people. The match is in place before you announce it.</p>
+   <div class="mini"><div class="r"><span>Match in place</span><span class="ok">$500</span></div><div class="r"><span>In place until</span><span>1 November</span></div><div class="r"><span>Matched so far</span><span>$120</span></div></div></div>
+  <div class="kind k2"><span class="ico"><svg class="i"><use href="#trophy"/></svg></span><h3>Prize payouts</h3><p>Winners see the date their prize lands.</p></div>
+  <div class="kind k3"><span class="ico"><svg class="i"><use href="#undo"/></svg></span><h3>Give-backs</h3><p>Return fees or winnings to the people who paid them.</p></div>
+ </div>
+</section>
+
+<section class="band">
+ <h2><span>You make the promise.</span><em>We do the admin.</em></h2>
+ <div class="steps">
+  <div class="step"><span class="n">1</span><p>Put the money in place, or link to where it already is.</p></div>
+  <div class="step"><span class="n">2</span><p>Set who can claim, how much, and when.</p></div>
+  <div class="step"><span class="n">3</span><p>Pledger checks each claim and records every payment in public.</p></div>
+ </div>
+</section>
+
+<div class="head" id="live"><h2>Live pledges</h2><a class="btn btn-ghost" href="#">See all</a></div>
+<section class="pledges" style="padding-top:0">
+ <a class="pl" href="#">
+  <div class="top"><span class="who"><span class="av" style="background:var(--sage-soft)">PL</span>Pledger demo</span><span class="chip m">Matching</span></div>
+  <h3>Test match pool</h3>
+  <div class="bar"><i></i></div>
+  <div class="stats"><div><b>$500</b><small>in place</small></div><div><b>$120</b><small>matched</small></div><div><b>1 Nov</b><small>in place until</small></div></div>
+  <span class="go">View pledge <svg class="i"><use href="#arrow"/></svg></span>
+ </a>
+ <a class="pl" href="#">
+  <div class="top"><span class="who"><span class="av" style="background:var(--peach-soft)">EM</span>Erin Magennis</span><span class="chip g">Give-back</span></div>
+  <h3>Get your Artizen 10% back</h3>
+  <div class="stats"><div><b>50%</b><small>of her winnings</small></div><div><b>41</b><small>in line</small></div><div><b>20 Oct</b><small>next update</small></div></div>
+  <span class="go">View pledge <svg class="i"><use href="#arrow"/></svg></span>
+ </a>
+</section>
+
+<div class="ground">Footer art: grass, flowers, a bush, a small animal (Higgsfield)</div>
+<footer><a class="logo" href="#" style="font-size:16px"><span class="mark" style="width:24px;height:24px;border-radius:8px"></span>Pledger</a><span>Part of ImpactHook · <span class="sample">Sample data</span></span></footer>
+</div></body></html>
