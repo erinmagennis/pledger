@@ -1,0 +1,23 @@
+{
+  "name": "@pledger/verify",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verify Artizen receipt emails (.eml) by DKIM and extract claim facts",
+  "type": "module",
+  "main": "src/index.ts",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "mailauth": "^7.3.0",
+    "postal-mime": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}
