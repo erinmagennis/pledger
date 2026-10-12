@@ -48,6 +48,30 @@ Two fingerprint bugs found and fixed while testing:
 | 2026-10-11 | Spike on Tempo Moderato: sponsor deposit, matched donation with memo, refund | Both transactions succeeded (scripts in `spike/tempo/`) |
 | 2026-10-12 | MatchPool v1 deployed: `0x02b1364d6d6a4a2a73665591d2083d25e7396a5f` (1:1 match, $20 cap per donor, locked until 31 Dec 2026). $500 test match deposited | Deploy `0xe9836e53bb5b58a59c756edd34676dd2586302f4b8ca02b0ec67615d63636d2f`, deposit `0x650e4358da4971b5ae8555cf279cb44c653d69671b607513574073ef2d245564`, both succeeded |
 
+## Zcash testnet: private pledge with a viewing key
+
+Spike on 2026-10-12 (16:49 to 17:26 UTC). Testnet only. Data for the page: `app/src/content/zcash-pledge.json`. App tests: `app/test/zcash-pledge.test.ts`.
+
+| Date | Check | Result |
+|---|---|---|
+| 2026-10-12 | Address `utest1c8lhjkqn4smha3x2ndtmjsnrk4xrczwexpuuz76hgp76c0cyjch94crsd5k5t52cj9ttakfg4d3j2y2dd7af4ants6qtt2d3zc3y7ya2` (Orchard only) funded with 0.125 TAZ from the Valar testnet faucet | Pledge tx [`8341e0d3a869bd729b1b4be00613e5399a95fb192cecbd75a26979069c75c01a`](https://testnet.cipherscan.app/tx/8341e0d3a869bd729b1b4be00613e5399a95fb192cecbd75a26979069c75c01a), block 4492820 |
+| 2026-10-12 | Public explorer view of the pledge tx | Fee only (10,000 zat). No sender, no recipient, no amount |
+| 2026-10-12 | Watch-only wallet made from the viewing key alone (zingo-cli, zingolib dev build with NU7, server `https://testnet.zec.rocks:443`, birthday 4492700) | Wallet kind "Loaded from unified full viewing key". Balance 12,500,000 zat. The received note shows no sender |
+| 2026-10-12 | Send from the watch-only wallet | Fails: "No unified spending key found for this account. No spend capability" |
+| 2026-10-12 | Send 0.001 TAZ from the seed wallet (fee 0.0001 TAZ) | Tx [`2daec20f9de9d4a4d4ef35794804adde14864d6f506a1fc8df7ea0b6585f8258`](https://testnet.cipherscan.app/tx/2daec20f9de9d4a4d4ef35794804adde14864d6f506a1fc8df7ea0b6585f8258), block 4492867 |
+| 2026-10-12 | Watch-only wallet re-synced after that send | Sees the spend and the change. Balance 12,390,000 zat (0.1239 TAZ), the number on the page |
+| 2026-10-12 | Server-side scan in Node with `@ledgerhq/zcash-utils` 2.6.0 and the viewing key | Finds the pledge in compact blocks, but the full read fails: the library predates testnet NU7 (branch ID 0x77190AD9) |
+
+Verify it yourself:
+
+```
+zingo-cli --chain testnet --server https://testnet.zec.rocks:443 --viewkey <UFVK> --birthday 4492700 --waitsync balance
+```
+
+The full viewing key is on the pledge page under "Verify it yourself". zingo-cli v6 also asks for a Nym proxy (`--nym-proxy`) on connected sessions.
+
+Not live yet: the page shows the balance checked on 12 Oct 2026, not a live read. A server-side balance read waits on NU7 support in `@ledgerhq/zcash-utils`. Mainnet has not been tried.
+
 ## Live site (pledger.impacthook.org)
 
 | Date | Check | Result |

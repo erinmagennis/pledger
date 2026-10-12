@@ -314,3 +314,24 @@ section.gb-sec.gb-rule-sec{padding-top:32px}
  .gb-rule{grid-template-columns:1fr;gap:32px;padding:24px 22px}
  .gb-rule-rows .r{grid-template-columns:1fr;gap:2px}
 }
+
+/* zcash testnet pledge: private funder chip, row notes, activity links, verify block */
+.chip.private{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.mini .r.has-note{flex-wrap:wrap}
+.mini .r .mini-note{flex-basis:100%;text-align:right;font-size:12.5px;color:var(--faint);margin-top:-4px}
+.log .log-link{color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.log .log-link:hover{text-decoration-color:var(--accent)}
+.zc-verify summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.zc-verify summary::-webkit-details-marker{display:none}
+.zc-verify summary::after{content:"+";font-size:22px;color:var(--soft);line-height:1}
+.zc-verify[open] summary::after{content:"\2212"}
+.zc-verify summary small{display:block;font-size:14px;color:var(--soft);margin-top:4px}
+.zc-verify summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
+.zc-body{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.zc-copy{background:var(--ground);border-radius:var(--r-sm);padding:12px 14px;box-shadow:inset 0 0 0 1px var(--line)}
+.zc-copy-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.zc-copy-k{font-size:13.5px;font-weight:600;color:var(--soft)}
+.zc-mono{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.5;word-break:break-all;max-height:7.5em;overflow:auto;user-select:all}
+.zc-copy-err{display:block;font-size:13px;color:#8a4b2b;margin-top:6px}
+.zc-p{font-size:14px;color:var(--soft)}
+.zc-quiet{font-size:13.5px;color:var(--faint);padding:0 6px}

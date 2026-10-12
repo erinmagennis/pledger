@@ -5,8 +5,9 @@ import { Icon } from "@/components/Icons";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
 import { ActivityCard, BackersSection, ClaimSection, HowCard, InPlaceCard, ProofStrip, RuleCard, SectionHead } from "@/components/pledge/PledgeCards";
 import { LineCard } from "@/components/claim/LineCard";
+import { ZcashVerify } from "@/components/pledge/ZcashVerify";
 import { getLineData } from "@/lib/live";
-import { getPledge, getPledges, lineStats, withLiveLine } from "@/lib/pledges";
+import { ZCASH_SLUG, getPledge, getPledges, lineStats, withLiveLine } from "@/lib/pledges";
 
 type Params = { slug: string };
 
@@ -51,6 +52,32 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
           <LineCard initial={st} />
         </section>
         <ProofStrip pledge={pledge} />
+      </>
+    );
+  }
+
+  if (base.slug === ZCASH_SLUG) {
+    return (
+      <>
+        <Link className="back" href="/#live"><Icon name="arrow" small />All pledges</Link>
+        <PledgeHeader
+          pledge={base}
+          hideBy
+          sub="The money is visible to anyone with the viewing key. Who gave it is not. The key cannot spend."
+        />
+        <section className="pgrid">
+          <div className="pcol">
+            <ActivityCard pledge={base} />
+            <HowCard pledge={base} />
+          </div>
+          <div className="pcol side">
+            <InPlaceCard pledge={base} />
+            <ZcashVerify />
+            <p className="zc-quiet">
+              Anyone with the key can read memos. A funder who pays from a transparent address is visible on chain anyway.
+            </p>
+          </div>
+        </section>
       </>
     );
   }

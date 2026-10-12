@@ -31,6 +31,7 @@ export function PledgeHeader({
     <header className={`phead ${pledge.kind}`}>
       <div className="meta-row">
         <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span> {pledge.demo && <span className="chip demo">Demo · test money</span>}
+        {pledge.testnet && <span className="chip demo">Testnet · test money</span>}
         {!hideBy && (
           <span className="who">
             <span className="av" style={{ background: WHO_BG[pledge.kind] }}>{pledge.by.initials}</span>

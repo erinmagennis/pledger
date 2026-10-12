@@ -1,0 +1,33 @@
+{
+  "network": "Zcash testnet",
+  "unit": "TAZ",
+  "address": "utest1c8lhjkqn4smha3x2ndtmjsnrk4xrczwexpuuz76hgp76c0cyjch94crsd5k5t52cj9ttakfg4d3j2y2dd7af4ants6qtt2d3zc3y7ya2",
+  "addressType": "Orchard-only unified address",
+  "viewingKey": "uviewtest160stpmm6vu49msg2e4fkfjkmw7z8vzejdpacdgmnyvhq3yx9zdwealcp2h9quhx7v6f4tjlpxjksuge7ath275839uzrrxj77l2dq6nr8xvj3eh50kzxwyulmt0lc2l9wvtzqgfvehecn6w5hyehzh2p6qnmwj3zu4nf5uek363trnw6lu56apezg84wqjae37qmhcc43x4ey5uttga3c4049w7j05dgep29kugjpfcu7mul27wh3fhlczurryxxthxuvam7yggrk92m3erlcws4jg24e2qwyf57d387453er7wzxru4upaq97qh4rqxh7nzw73qhsgaty8w8w2tv7hu3g5mdlqxz0ey6n04pjau67ldkfmxjn2wx26k2cmsgw2gmvj654g8fnteswtuh6wmztp3ks7xx292u84epg24u2t4n2qjg9yea7fn2l4lltatjzx4fqfp4vf6xdvz8yu8xrgx97jxf4lr92639c7msn3aqgt0u0l6",
+  "viewingKeyType": "Unified full viewing key",
+  "birthdayHeight": 4492700,
+  "balanceZat": 12390000,
+  "pledgeTx": {
+    "txid": "8341e0d3a869bd729b1b4be00613e5399a95fb192cecbd75a26979069c75c01a",
+    "block": 4492820,
+    "date": "2026-10-12",
+    "amountZat": 12500000,
+    "feeZat": 10000,
+    "source": "Valar testnet faucet"
+  },
+  "outgoingTx": {
+    "txid": "2daec20f9de9d4a4d4ef35794804adde14864d6f506a1fc8df7ea0b6585f8258",
+    "block": 4492867,
+    "date": "2026-10-12",
+    "amountZat": 100000,
+    "feeZat": 10000
+  },
+  "explorerTxUrl": "https://testnet.cipherscan.app/tx/",
+  "explorerShows": "Fee only. No sender, no recipient, no amount.",
+  "verifiedAt": "2026-10-12T17:25:00Z",
+  "verifiedBlock": 4492867,
+  "verifiedWith": "zingo-cli (zingolib dev build, NU7)",
+  "indexer": "https://testnet.zec.rocks:443",
+  "verifyCommand": "zingo-cli --chain testnet --server https://testnet.zec.rocks:443 --viewkey <UFVK> --birthday 4492700 --waitsync balance",
+  "spendCheck": "No spend capability"
+}

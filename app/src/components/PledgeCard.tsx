@@ -6,6 +6,7 @@ const WHO_BG: Record<Pledge["kind"], string> = {
   matching: "var(--sage-soft)",
   prize: "var(--sage-soft)",
   "give-back": "var(--peach-soft)",
+  private: "var(--ground)",
 };
 
 export function PledgeCard({ pledge }: { pledge: Pledge }) {
@@ -17,6 +18,7 @@ export function PledgeCard({ pledge }: { pledge: Pledge }) {
           {pledge.by.name}
         </span>
         <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span> {pledge.demo && <span className="chip demo">Demo · test money</span>}
+        {pledge.testnet && <span className="chip demo">Testnet · test money</span>}
       </div>
       <h3>{pledge.title}</h3>
       {pledge.progress !== undefined && (

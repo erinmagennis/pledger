@@ -9,13 +9,14 @@ export function InPlaceCard({ pledge }: { pledge: Pledge }) {
       <h2 style={{ marginTop: 8 }}>What&apos;s in place</h2>
       <div className="mini">
         {pledge.inPlace.map((r) => (
-          <div className="r" key={r.label}>
+          <div className={r.note ? "r has-note" : "r"} key={r.label}>
             <span>{r.label}</span>
             {r.href ? (
               <a className="mini-link" href={r.href} target="_blank" rel="noreferrer">{r.value}</a>
             ) : (
               <span className={r.ok ? "ok" : undefined}>{r.value}</span>
             )}
+            {r.note && <small className="mini-note">{r.note}</small>}
           </div>
         ))}
       </div>
@@ -31,7 +32,11 @@ export function ActivityCard({ pledge }: { pledge: Pledge }) {
         {pledge.activity.map((a, i) => (
           <li key={i}>
             <time>{a.date}</time>
-            <span>{a.text}</span>
+            {a.href ? (
+              <a className="log-link" href={a.href} target="_blank" rel="noreferrer">{a.text}</a>
+            ) : (
+              <span>{a.text}</span>
+            )}
             {a.amount ? <b>{a.amount}</b> : <span />}
           </li>
         ))}

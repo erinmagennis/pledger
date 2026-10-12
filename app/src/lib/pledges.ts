@@ -3,6 +3,7 @@
 // Supabase line (withLiveLine), and the home tracker from both (computeTotals).
 // Pure: no server imports, safe for client components and tests.
 import { fillPerson, formatCents, formatCentsExact, isExtra, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
+import zcashJson from "../content/zcash-pledge.json";
 
 // Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
 const TEMPO_EXPLORER = "https://explore.testnet.tempo.xyz";
@@ -15,12 +16,12 @@ const POOL_ROWS: InPlaceRow[] = [
   addrRow("Pool contract", shortWho(POOL_ADDRESS), POOL_ADDRESS),
 ];
 
-export type PledgeKind = "matching" | "prize" | "give-back";
-export type Chain = "Tempo testnet" | "Base";
+export type PledgeKind = "matching" | "prize" | "give-back" | "private";
+export type Chain = "Tempo testnet" | "Base" | "Zcash testnet";
 
 export type Stat = { value: string; label: string };
 export type ActivityEntry = { date: string; text: string; amount?: string; href?: string };
-export type InPlaceRow = { label: string; value: string; ok?: boolean; href?: string };
+export type InPlaceRow = { label: string; value: string; ok?: boolean; href?: string; /** Small line under the row. */ note?: string };
 
 export type Pledge = {
   slug: string;
@@ -28,6 +29,8 @@ export type Pledge = {
   title: string;
   /** True for test-money pledges; shows a "Demo" chip everywhere. */
   demo?: boolean;
+  /** True for testnet pledges that are not the demo; shows a "Testnet" chip everywhere. */
+  testnet?: boolean;
   by: { name: string; initials: string };
   chain: Chain;
   /** Short stats for the pledge header, and for cards when cardStats is not set (2 or 3). */
@@ -46,6 +49,7 @@ export const KIND_LABEL: Record<PledgeKind, string> = {
   matching: "Matching",
   prize: "Prize",
   "give-back": "Give-back",
+  private: "Private funder",
 };
 
 /** "20 October 2026" to "20 Oct". */
@@ -124,6 +128,106 @@ export function withLiveLine(pledge: Pledge, st: LineStats): Pledge {
   return { ...pledge, ...lineFields(st) };
 }
 
+
+// ---------- Zcash testnet: private funder, public money ----------
+
+type ZcashTx = { txid: string; block: number; date: string; amountZat: number; feeZat: number };
+
+/** Facts from the Zcash testnet viewing-key spike (12 Oct 2026). The viewing key and address are public by design. */
+export type ZcashPledgeData = {
+  network: "Zcash testnet";
+  unit: "TAZ";
+  address: string;
+  addressType: string;
+  viewingKey: string;
+  viewingKeyType: string;
+  birthdayHeight: number;
+  balanceZat: number;
+  pledgeTx: ZcashTx & { source: string };
+  outgoingTx: ZcashTx;
+  explorerTxUrl: string;
+  explorerShows: string;
+  verifiedAt: string;
+  verifiedBlock: number;
+  verifiedWith: string;
+  indexer: string;
+  /** Contains the placeholder <UFVK>; use zcashVerifyCommand() for the full command. */
+  verifyCommand: string;
+  spendCheck: string;
+};
+
+export const ZCASH_SLUG = "zcash-private-pledge";
+export const ZCASH: ZcashPledgeData = zcashJson as ZcashPledgeData;
+
+/** 12_390_000 zat to "0.1239 TAZ" (1 TAZ = 100,000,000 zat; trailing zeros dropped). */
+export function formatZat(zat: number, unit = ZCASH.unit): string {
+  const whole = Math.floor(zat / 1e8);
+  const frac = String(zat % 1e8).padStart(8, "0").replace(/0+$/, "");
+  return `${whole.toLocaleString("en-US")}${frac ? "." + frac : ""} ${unit}`;
+}
+
+/** The verify command with the real viewing key in place. */
+export function zcashVerifyCommand(d: ZcashPledgeData = ZCASH): string {
+  return d.verifyCommand.replace("<UFVK>", d.viewingKey);
+}
+
+/** "2026-10-12" to "12 Oct 2026". */
+function isoDay(iso: string): string {
+  return new Date(iso.slice(0, 10) + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+const shortTx = (tx: string) => tx.slice(0, 6) + "…" + tx.slice(-4);
+
+export function zcashPledge(d: ZcashPledgeData = ZCASH): Pledge {
+  const inPlace = `${formatZat(d.balanceZat)} (testnet)`;
+  const checked = isoDay(d.verifiedAt);
+  return {
+    slug: ZCASH_SLUG,
+    kind: "private",
+    title: "Public money, private funder",
+    testnet: true,
+    by: { name: "Kept private", initials: "?" },
+    chain: d.network,
+    stats: [
+      { value: formatZat(d.balanceZat), label: "in place now" },
+      { value: "Private", label: "funder" },
+      { value: shortDate(checked), label: "last checked" },
+    ],
+    cardStats: [
+      { value: formatZat(d.balanceZat), label: "in place now" },
+      { value: "Private", label: "funder" },
+    ],
+    inPlace: [
+      { label: "In place now", value: inPlace, ok: true },
+      { label: "Funder", value: "Private" },
+      { label: "Last verified", value: `Block ${d.verifiedBlock.toLocaleString("en-US")}, ${checked}` },
+      { label: "Pledge tx", value: shortTx(d.pledgeTx.txid), href: d.explorerTxUrl + d.pledgeTx.txid, note: "The explorer shows the fee only." },
+      { label: "Chain", value: d.network },
+    ],
+    activity: [
+      {
+        date: isoDay(d.outgoingTx.date),
+        text: `Test payment out, fee ${formatZat(d.outgoingTx.feeZat)}`,
+        amount: formatZat(d.outgoingTx.amountZat),
+        href: d.explorerTxUrl + d.outgoingTx.txid,
+      },
+      {
+        date: isoDay(d.pledgeTx.date),
+        text: "Pledge funded with free test money",
+        amount: formatZat(d.pledgeTx.amountZat),
+        href: d.explorerTxUrl + d.pledgeTx.txid,
+      },
+    ],
+    howItWorks: [
+      `The funder sends money to a private Zcash address. This one holds ${formatZat(d.pledgeTx.amountZat)} of free test money from a testnet faucet.`,
+      "The pledge publishes a viewing key. With it, anyone can see what came in, what went out and what is left.",
+      "The key cannot spend. Only the funder's own wallet can move the money.",
+      "Who sent the money stays private. The public explorer shows the fee and nothing else.",
+    ],
+    action: { label: "Verify it yourself", href: "#verify" },
+  };
+}
+
 const pledges: Pledge[] = [
   {
     // Static facts only. Live numbers and activity come from Tempo via
@@ -173,6 +277,8 @@ const pledges: Pledge[] = [
     ],
     action: { label: "Check or add your claim", href: "/claim" },
   },
+  // Third by priority: after the demo pool and the Artizen give-back.
+  zcashPledge(),
 ];
 
 /** Live pool numbers for the test match pool (shape of /api/pools/test-match-pool). */

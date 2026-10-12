@@ -36,6 +36,7 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
           <div className="chips">
             <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span>
             {featured.demo && <span className="chip demo">Demo · test money</span>}
+            {featured.testnet && <span className="chip demo">Testnet · test money</span>}
           </div>
           {pool ? (
             <>
