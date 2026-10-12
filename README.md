@@ -1,30 +1,66 @@
 # Pledger
 
-Pledges with the money already in place.
+Pledges you can trust.
 
-When someone promises money (a match, a prize, a payout), Pledger shows whether it is actually there. A sponsor locks the pool up front. Every donation is matched the moment it is made. Anyone can see what was promised, what is locked, and what has been paid out.
+When someone promises money (a match, a prize, a give-back), Pledger shows whether the money is really there and when it will land. The person pledging sets the rule once. Pledger checks claims, keeps the public list and records every payment. It never holds anyone's money.
 
-Built for Colosseum's Crypto World's Fair (Sep 14 to Oct 12, 2026). Lead chain: Tempo. Claims and payouts for the first live pool: Base.
+Live: **https://pledger.impacthook.org**
 
-## Status (Oct 12)
+Built for Colosseum's Crypto World's Fair (Sep 14 to Oct 12, 2026). Started Oct 11, 2026. Chains: Tempo (match pools) and Base (claims, payouts and public records).
 
-- `contracts/`: **MatchPool v1** (Foundry). The sponsor's match is locked until a set date and cannot be taken back before it. Each donation is matched up to a ratio and a per-donor cap, then donation plus match goes to the recipient with a receipt memo. 20 tests pass, including a 1,000-run fuzz test. See `contracts/README.md`.
-- `design/`: the approved home page design (`home-v3.html`, screenshot `home-v3.png`) and the design tokens (`tokens.css`). Numbers on the page are sample data.
-- `spike/tempo/`: the first feasibility spike on Tempo's Moderato testnet (chain 42431). Verified donation tx `0xf9d5d6a1db04729828319cbb37912b7a3f19f4f3e10a98428099199614567368` and refund tx `0xd9b17d5ecb1a859e36b6839b586e466dd1e02e401353f339c16bea474cebf67d` (https://explore.testnet.tempo.xyz).
+## What you can try
 
-In progress:
-- The web app at pledger.impacthook.org: live pledges, a test match pool anyone can try with free test money, and the first real pledge.
-- The first real pledge is a give-back. People who paid Artizen's 10% endowment fee can claim it back from half of the builder's winnings. Claims are checked automatically from the signature on Artizen's receipt emails (DKIM), so nobody uploads screenshots. Each receipt can be claimed once. Payments go out on Base, inside Pledger or directly from any wallet, and Pledger checks each one on chain. Verified claims and payments are recorded publicly with EAS attestations on Base.
+| | Where | What happens |
+|---|---|---|
+| Test match pool | [/pledges/test-match-pool](https://pledger.impacthook.org/pledges/test-match-pool) | Press **Try it**. The page makes a throwaway test wallet, fills it with free test money, and gives $5 to $20. The pool matches 1:1 up to $20 per wallet, in the same transaction, with no fee for the donor. The match is locked until 31 Dec 2026 and cannot be taken back before then. No login, no wallet extension. |
+| Artizen give-back (real) | [/pledges/artizen-give-back](https://pledger.impacthook.org/pledges/artizen-give-back) | People who paid Artizen's 10% endowment fee in Season 7 claim it back from half of the builder's Colosseum winnings. They drop in their original receipt emails, and Pledger checks Artizen's DKIM signature on each one, so there are no screenshots and no manual review. Self-backers go first, smallest claims first. Anyone can pay people in line directly on Base, by amount or by the next people in line. |
+
+## How it works
+
+```mermaid
+flowchart LR
+  F[Funder makes a pledge] -->|money locked or linked| P[(Pledger)]
+  C[Claimant] -->|signed receipt email + wallet signature| P
+  P -->|checks DKIM, removes duplicates, orders the line| L[Public line]
+  H[Helper or funder] -->|USDC on Base, straight to the claimant| R[Claimant's wallet]
+  R -->|tx checked on chain| P
+  P -->|EAS records: claim checked, paid| E[(Base)]
+  T[Tempo MatchPool] -->|donation + match in one tx, with memo| G[Recipient]
+```
+
+- **Match pools on Tempo** (`contracts/`): the sponsor deposits the match, which stays locked until a set date. Each donation is matched up to a ratio and a per-donor cap, then donation and match go to the recipient together with a receipt memo. Donors pay no fee (Tempo's fee sponsor relay).
+- **Claims from email receipts** (`verify/`, `app/src/lib/verify/`): only a valid signature from artizen.fund that matches the sender counts. The fingerprint of each email can be claimed once. A creator's "You sold" email proves a purchase was self-backed, and it never adds money.
+- **Payments on Base** (`app/src/lib/base.ts`): a payment counts when a native USDC transfer to the claimant appears in a successful transaction. Pay inside Pledger, paste a transaction link, or pay by card through Stripe's onramp with the claimant's wallet locked as the destination (test mode pending Stripe approval).
+- **Public records** (`app/src/lib/eas.ts`): each checked claim and each payment is attested on Base with EAS. Records hold a fingerprint, project, fee and status, never personal data.
+- **Privacy**: Pledger stores a fingerprint of each receipt, the project, date and fee, the wallet and the display choice. Never the email or its contents.
+
+## Where it fits
+
+```mermaid
+flowchart LR
+  IH[ImpactHook: milestone-gated funding from trading fees] -->|funds released on milestones| PL[Pledger: the promise and its payouts, in public]
+  PA[Pantheon: human and agent committees with signed verdicts] -->|reviews claims that code cannot check| PL
+  PL -->|paid, on time, on record| People[Creators, winners, backers]
+```
+
+Pledger is the third piece of one trust-driven funding stack by the same builder: [ImpactHook](https://github.com/erinmagennis/ImpactHook) makes projects prove milestones, [Pantheon](https://github.com/erinmagennis/pantheon) makes committee decisions accountable, and Pledger makes funders' promises visible and kept. Those repos are separate and not part of this submission.
 
 ## For judges
 
-- What is tested and how: `docs/TESTING.md`. Edge cases and how each is handled: `docs/edge-cases.md`.
-- Run the contract tests: `cd contracts && forge test` (40 tests).
-- The design the app is built from: `design/home-v3.png`.
+- What is tested and how: [`docs/TESTING.md`](docs/TESTING.md). Edge cases and how each is handled: [`docs/edge-cases.md`](docs/edge-cases.md). Card payments: [`docs/card-payments.md`](docs/card-payments.md).
+- Contract tests: `cd contracts && forge test` (40 tests, including fuzz and random-sequence invariants).
+- App tests: `cd app && npm install && npx vitest run`. Receipt checker tests: `cd verify && npm install && npx vitest run`.
+- Test pool contract on Tempo Moderato testnet: `0x02b1364d6d6a4a2a73665591d2083d25e7396a5f` ([explorer](https://explore.testnet.tempo.xyz/address/0x02b1364d6d6a4a2a73665591d2083d25e7396a5f)).
+- The design the app is built from: [`design/home-v3.png`](design/home-v3.png).
 
-## Related projects
+## Repo layout
 
-Designed to be compatible with two earlier projects by the same builder: ImpactHook (milestone-gated funding on EVM) and Pantheon (AI committees that issue signed verdicts).
+- `app/`: the Next.js web app (pages, API routes, Supabase schema in `app/sql/`).
+- `contracts/`: MatchPool v1 and its tests (Foundry).
+- `verify/`: the Artizen receipt checker as a standalone module with tests.
+- `spike/tempo/`: the first feasibility spike on Tempo testnet.
+- `design/`: approved design reference and tokens.
+- `docs/`: testing log, edge cases, card payments.
 
 ## License
 
