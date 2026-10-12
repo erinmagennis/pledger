@@ -24,7 +24,7 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
   if (claims.error) return { ok: false, status: 500, error: "Could not load" };
   if (!claims.data?.length) return { ok: false, status: 404, error: "This address is not in line" };
 
-  const seen = await db.from("pledger_payments").select("tx_hash").eq("tx_hash", txHash).maybeSingle();
+  const seen = await db.from("pledger_payments").select("tx_hash").eq("tx_hash", txHash.toLowerCase()).maybeSingle();
   if (seen.data) return { ok: false, status: 409, error: "This payment is already recorded", duplicate: true };
 
   const checked = await checkUsdcPayment(txHash, to);
@@ -43,7 +43,7 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
   }
 
   // Public record for each of this person's claims once all of them are paid.
-  const payments = await db.from("pledger_payments").select("tx_hash,to_address,amount_units,block_time").eq("to_address", to);
+  const payments = await db.from("pledger_payments").select("tx_hash,to_address,amount_units,block_time").eq("to_address", to.toLowerCase());
   const mine = buildLine(claims.data as never, payments.data ?? []);
   const allPaid = mine.every((e) => e.status === "paid");
   if (allPaid) {
