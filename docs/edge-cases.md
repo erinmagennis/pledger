@@ -10,6 +10,7 @@ Real-data checks run on 2026-10-12 against a genuine Artizen email:
 |---|---|---|
 | Original email | Valid | TESTED |
 | Same email, file renamed | Valid, same fingerprint, so a second upload is rejected | TESTED |
+| Message-ID header edited (not covered by Artizen's signature) | Same fingerprint, so it cannot be used to claim twice | TESTED |
 | Recipient (To) changed | Signature fails | TESTED |
 | Subject changed | Signature fails | TESTED |
 | Amount in the body changed | Signature fails (body hash mismatch) | TESTED |
