@@ -1,4 +1,4 @@
--- Pledger: limited Postgres role that can only touch the pledger_ tables.
+-- Pledger: limited Postgres role that can only touch the pledger_ tables. AFTER THE HACKATHON, not tonight: the app code must change first (docs/limited-role.md).
 -- WHERE TO PASTE: Supabase dashboard > SQL Editor > New query > paste this whole file > Run.
 -- Safe to run twice: additive only, no DROP. Nothing here touches another app's objects.
 --
