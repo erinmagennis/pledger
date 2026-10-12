@@ -9,7 +9,7 @@ import { readPool, type PoolData } from "@/lib/tempo";
 // Live pool data from Tempo testnet, refreshed about every 10 seconds.
 export const revalidate = 10;
 
-export const metadata: Metadata = { title: "Test match pool · Pledger" };
+export const metadata: Metadata = { title: "Demo match pool · Pledger" };
 
 export default async function TestMatchPoolPage() {
   const base = getPledge("test-match-pool");

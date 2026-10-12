@@ -46,7 +46,7 @@ const sections: { h: string; p: string[] }[] = [
   },
   {
     h: "Test money",
-    p: ["The test match pool uses test money on a test network. It has no value."],
+    p: ["The demo match pool uses test money on a test network. It has no value."],
   },
   {
     h: "No advice, no warranty",

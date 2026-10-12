@@ -26,7 +26,7 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
           <div className="float f2">
             <span className="ic"><Icon name="check" /></span>
             <div>
-              <b>{matched ? `${latest.match} matched on testnet` : `${latest.amount} given on testnet`}</b>
+              <b>{matched ? `Demo: ${latest.match} matched with test money` : `Demo: ${latest.amount} given with test money`}</b>
               <small><TimeAgo unix={latest.time} renderedAt={pool.fetchedAt} /> · checked</small>
             </div>
           </div>
@@ -34,7 +34,7 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
         <div className="float f1">
           <div className="row">
             <span className="t">{featured.title}</span>
-            <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span>
+            <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span> {featured.demo && <span className="chip demo">Demo · test money</span>}
           </div>
           {pool ? (
             <>

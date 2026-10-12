@@ -26,6 +26,8 @@ export type Pledge = {
   slug: string;
   kind: PledgeKind;
   title: string;
+  /** True for test-money pledges; shows a "Demo" chip everywhere. */
+  demo?: boolean;
   by: { name: string; initials: string };
   chain: Chain;
   /** Short stats for the pledge header, and for cards when cardStats is not set (2 or 3). */
@@ -97,7 +99,8 @@ const pledges: Pledge[] = [
     // withLivePool() below (see src/lib/tempo.ts readPool()).
     slug: "test-match-pool",
     kind: "matching",
-    title: "Test match pool",
+    title: "Demo match pool",
+    demo: true,
     by: { name: "Pledger demo", initials: "PL" },
     chain: "Tempo testnet",
     stats: [

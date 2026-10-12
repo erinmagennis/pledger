@@ -16,7 +16,7 @@ export function PledgeCard({ pledge }: { pledge: Pledge }) {
           <span className="av" style={{ background: WHO_BG[pledge.kind] }}>{pledge.by.initials}</span>
           {pledge.by.name}
         </span>
-        <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span>
+        <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span> {pledge.demo && <span className="chip demo">Demo · test money</span>}
       </div>
       <h3>{pledge.title}</h3>
       {pledge.progress !== undefined && (

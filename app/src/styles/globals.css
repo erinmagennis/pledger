@@ -287,3 +287,5 @@ section.gb-sec{padding-top:64px}
 .gb-happened-k{font-size:13px;font-weight:600;color:var(--ink)!important;margin-top:0!important}
 .gb-happened-link{display:inline-block;margin-top:8px;font-size:14px;font-weight:600;color:var(--accent)}
 .linecard .lc-top{align-items:center}
+
+.chip.demo{background:#eceae4;color:#4a4d49;margin-left:6px}
