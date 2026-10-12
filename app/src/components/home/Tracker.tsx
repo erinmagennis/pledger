@@ -1,10 +1,13 @@
 import { formatCents } from "@/lib/claims";
 import type { Totals } from "@/lib/pledges";
+import { Icon } from "../Icons";
 import { Sparkline } from "./Sparkline";
+import { TimeAgo } from "./TimeAgo";
 
 const AV_BG = ["var(--peach-soft)", "var(--sage-soft)", "var(--butter-soft)"];
 
-export function Tracker({ totals }: { totals: Totals }) {
+/** renderedAt = unix seconds of the server render, for relative times. */
+export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: number }) {
   const more = totals.peopleCount - totals.people.length;
   return (
     <div className="card tracker">
@@ -22,9 +25,31 @@ export function Tracker({ totals }: { totals: Totals }) {
           <span className="k">{totals.peopleCount} {totals.peopleCount === 1 ? "person" : "people"} in line</span>
         </div>
       )}
-      <Sparkline series={totals.series} flat={totals.flat} />
+      {!totals.flat && <Sparkline series={totals.series} />}
+      {totals.feed.length > 0 && (
+        <ul className="tfeed" aria-label="Latest activity">
+          {totals.feed.map((f) => (
+            <li key={f.href}>
+              <a href={f.href} target="_blank" rel="noreferrer">
+                {f.av ? (
+                  <span className="av" style={{ background: "var(--peach-soft)" }}>{f.av}</span>
+                ) : (
+                  <span className="av ic"><Icon name="undo" small /></span>
+                )}
+                <span className="tx">
+                  <b>{f.text}</b>
+                  <small>
+                    {f.testnet && <span className="tag">on testnet</span>}
+                    <TimeAgo unix={f.time} renderedAt={renderedAt} />
+                  </small>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
       {totals.byKind.length > 0 && (
-        <>
+        <div className="tfoot">
           <div className="seg">
             {totals.byKind.map((k) => (
               <i key={k.kind} className={`tone-${k.kind}`} style={{ flex: k.cents }} />
@@ -35,7 +60,7 @@ export function Tracker({ totals }: { totals: Totals }) {
               <span key={k.kind}><i className={`tone-${k.kind}`} />{k.label} {formatCents(k.cents)}</span>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

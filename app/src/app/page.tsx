@@ -22,7 +22,7 @@ export default async function Home() {
     <>
       <Hero featured={featured} pool={pool} />
       <section className="grid">
-        <Tracker totals={computeTotals(pool, lineData.line, lineData.payments)} />
+        <Tracker totals={computeTotals(pool, lineData.line, lineData.payments)} renderedAt={pool?.fetchedAt ?? Math.floor(Date.now() / 1000)} />
         <Kinds matched={pool?.totalMatched ?? null} />
       </section>
       <Band />

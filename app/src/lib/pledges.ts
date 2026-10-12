@@ -4,12 +4,23 @@
 // Pure: no server imports, safe for client components and tests.
 import { formatCents, NEXT_UPDATE, type LineEntry, type PaymentRecord } from "./claims";
 
+// Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
+const TEMPO_EXPLORER = "https://explore.testnet.tempo.xyz";
+const POOL_ADDRESS = "0x02b1364d6d6a4a2a73665591d2083d25e7396a5f";
+const DEMO_PROJECT = "0x420ff9871fa9Dc61232356F2c37c7C5E42EC0967";
+const BASESCAN_TX = "https://basescan.org/tx/";
+const addrRow = (label: string, value: string, addr: string): InPlaceRow => ({ label, value, href: `${TEMPO_EXPLORER}/address/${addr}` });
+const POOL_ROWS: InPlaceRow[] = [
+  addrRow("Goes to", `Demo project ${shortWho(DEMO_PROJECT)}`, DEMO_PROJECT),
+  addrRow("Pool contract", shortWho(POOL_ADDRESS), POOL_ADDRESS),
+];
+
 export type PledgeKind = "matching" | "prize" | "give-back";
 export type Chain = "Tempo testnet" | "Base";
 
 export type Stat = { value: string; label: string };
 export type ActivityEntry = { date: string; text: string; amount?: string; href?: string };
-export type InPlaceRow = { label: string; value: string; ok?: boolean };
+export type InPlaceRow = { label: string; value: string; ok?: boolean; href?: string };
 
 export type Pledge = {
   slug: string;
@@ -98,7 +109,7 @@ const pledges: Pledge[] = [
       { label: "Match put in place", value: "$500", ok: true },
       { label: "Match rule", value: "1:1, up to $20 per wallet" },
       { label: "In place until", value: "31 December 2026" },
-      { label: "Goes to", value: "Demo project" },
+      ...POOL_ROWS,
       { label: "Chain", value: "Tempo testnet" },
     ],
     activity: [],
@@ -142,7 +153,7 @@ export type LivePool = {
   events: { kind: "donated" | "deposited"; tx: string; time: number; who: string; amount: string; match?: string }[];
 };
 
-const TX_URL = "https://explore.testnet.tempo.xyz/tx/";
+const TX_URL = TEMPO_EXPLORER + "/tx/";
 
 function dateLabel(unix: number): string {
   return new Date(unix * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -150,6 +161,11 @@ function dateLabel(unix: number): string {
 
 function shortWho(a: string): string {
   return a.slice(0, 6) + "…" + a.slice(-4);
+}
+
+/** "Visitor 0xcb8b…8D7F": testnet donors are people trying the demo. */
+function visitor(a: string): string {
+  return `Visitor ${shortWho(a)}`;
 }
 
 /** Merge live Tempo data into the test match pool pledge. */
@@ -171,6 +187,7 @@ export function withLivePool(pledge: Pledge, live: LivePool): Pledge {
       { label: "Donated so far", value: live.totalDonated },
       { label: "Donations", value: String(live.donationCount) },
       { label: "In place until", value: "31 December 2026" },
+      ...POOL_ROWS,
       { label: "Chain", value: "Tempo testnet" },
     ],
     activity: live.events.map((e) =>
@@ -178,7 +195,7 @@ export function withLivePool(pledge: Pledge, live: LivePool): Pledge {
         ? { date: dateLabel(e.time), text: `Match of ${e.amount} put in place`, amount: e.amount, href: TX_URL + e.tx }
         : {
             date: dateLabel(e.time),
-            text: e.match === "$0" ? `${shortWho(e.who)} gave ${e.amount}, match used up` : `${shortWho(e.who)} gave ${e.amount}, matched ${e.match}`,
+            text: e.match === "$0" ? `${visitor(e.who)} gave ${e.amount}, match used up` : `${visitor(e.who)} gave ${e.amount}, matched ${e.match}`,
             amount: e.amount,
             href: TX_URL + e.tx,
           },
@@ -212,13 +229,25 @@ export type Totals = {
   /** Initials for the most recent people in line (max 3). */
   people: string[];
   peopleCount: number;
+  /** Latest 3 events across pledges, newest first (testnet gifts and give-back payments). */
+  feed: FeedItem[];
+};
+
+export type FeedItem = {
+  /** 2-letter avatar text, or null to show the give-back icon. */
+  av: string | null;
+  text: string;
+  /** unix seconds */
+  time: number;
+  testnet: boolean;
+  href: string;
 };
 
 /** Minimal shape of the pool data the tracker needs (see PoolData in tempo.ts). */
 export type PoolTotals = {
   donatedUnits: string;
   matchedUnits: string;
-  events: { kind: "donated" | "deposited"; time: number; amountUnits: string; matchUnits?: string }[];
+  events: { kind: "donated" | "deposited"; time: number; amountUnits: string; matchUnits?: string; tx?: string; who?: string; amount?: string }[];
 };
 
 const unitsCents = (u: string | number | undefined) => Number(BigInt(String(u ?? "0").split(".")[0] || "0") / 10_000n);
@@ -267,6 +296,27 @@ export function computeTotals(pool: PoolTotals | null, line: LineEntry[], paymen
     ] as Totals["byKind"]
   ).filter((k) => k.cents > 0);
 
-  return { paidCents, testnetCents, byKind, series: flat ? [0, 0] : cumulative, flat, people, peopleCount: recent.size };
+  const feed: FeedItem[] = [
+    ...(pool?.events ?? [])
+      .filter((e) => e.kind === "donated" && e.tx && e.who)
+      .map((e) => ({
+        av: e.who!.slice(2, 4).toUpperCase(),
+        text: `${visitor(e.who!)} gave ${e.amount ?? formatCents(unitsCents(e.amountUnits))}`,
+        time: e.time,
+        testnet: true,
+        href: TX_URL + e.tx,
+      })),
+    ...payments.map((p) => ({
+      av: null,
+      text: `Give-back of ${formatCents(unitsCents(p.amount_units))} paid to ${shortWho(p.to_address)}`,
+      time: Math.floor(new Date(p.block_time).getTime() / 1000),
+      testnet: false,
+      href: BASESCAN_TX + p.tx_hash,
+    })),
+  ]
+    .sort((a, b) => b.time - a.time)
+    .slice(0, 3);
+
+  return { paidCents, testnetCents, byKind, series: flat ? [0, 0] : cumulative, flat, people, peopleCount: recent.size, feed };
 }
 

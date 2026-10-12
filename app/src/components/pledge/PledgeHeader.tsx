@@ -1,8 +1,13 @@
+import type { ReactNode } from "react";
 import { Button } from "../Button";
+import { Icon, type IconName } from "../Icons";
 import { WHO_BG } from "../PledgeCard";
 import { KIND_LABEL, type Pledge } from "@/lib/pledges";
 
-export function PledgeHeader({ pledge }: { pledge: Pledge }) {
+/** One mini card on the right of the header, in the home hero float style. Desktop only. */
+export type HeaderFloat = { icon: IconName; title: ReactNode; sub: ReactNode };
+
+export function PledgeHeader({ pledge, float }: { pledge: Pledge; float?: HeaderFloat }) {
   return (
     <header className={`phead ${pledge.kind}`}>
       <div className="meta-row">
@@ -24,6 +29,15 @@ export function PledgeHeader({ pledge }: { pledge: Pledge }) {
       <div className="ctas">
         <Button href={pledge.action.href}>{pledge.action.label}</Button>
       </div>
+      {float && (
+        <div className="float f2 phfloat">
+          <span className="ic"><Icon name={float.icon} /></span>
+          <div>
+            <b>{float.title}</b>
+            <small>{float.sub}</small>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -11,7 +11,11 @@ export function InPlaceCard({ pledge }: { pledge: Pledge }) {
         {pledge.inPlace.map((r) => (
           <div className="r" key={r.label}>
             <span>{r.label}</span>
-            <span className={r.ok ? "ok" : undefined}>{r.value}</span>
+            {r.href ? (
+              <a className="mini-link" href={r.href} target="_blank" rel="noreferrer">{r.value}</a>
+            ) : (
+              <span className={r.ok ? "ok" : undefined}>{r.value}</span>
+            )}
           </div>
         ))}
       </div>

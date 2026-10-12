@@ -47,6 +47,24 @@ describe("home tracker totals", () => {
     expect(t.flat).toBe(true);
   });
 
+  it("feed shows the latest 3 events across testnet gifts and give-backs, newest first", () => {
+    const pool: PoolTotals = {
+      donatedUnits: "15000000",
+      matchedUnits: "15000000",
+      events: [
+        { kind: "donated", time: 300, amountUnits: "5000000", matchUnits: "5000000", tx: "0xd3", who: "0xcb8bAAAA00000000000000000000000000008D7F", amount: "$5" },
+        { kind: "donated", time: 100, amountUnits: "10000000", matchUnits: "10000000", tx: "0xd1", who: "0x1111000000000000000000000000000000002222", amount: "$10" },
+        { kind: "deposited", time: 50, amountUnits: "500000000", tx: "0xdep", who: "0x5A76" },
+      ],
+    };
+    const pays: PaymentRecord[] = [{ tx_hash: "0xp1", to_address: "0xabcdef0000000000000000000000000000001234", amount_units: "2500000", block_time: new Date(200_000).toISOString() }];
+    const t = computeTotals(pool, [], pays);
+    expect(t.feed.map((f) => f.text)).toEqual(["Visitor 0xcb8b…8D7F gave $5", "Give-back of $2.50 paid to 0xabcd…1234", "Visitor 0x1111…2222 gave $10"]);
+    expect(t.feed[0]).toMatchObject({ av: "CB", testnet: true, href: "https://explore.testnet.tempo.xyz/tx/0xd3" });
+    expect(t.feed[1]).toMatchObject({ av: null, testnet: false, href: "https://basescan.org/tx/0xp1" });
+    expect(computeTotals(null, [], []).feed).toEqual([]);
+  });
+
   it("avatars come from the most recent people in line, one per person", () => {
     const line = [entry("a", "A. O.", 100, 0, "2026-10-01"), entry("a", "A. O.", 50, 0, "2026-10-01"), entry("b", "Tide Pools", 70, 0, "2026-10-03")];
     const t = computeTotals(null, line, []);

@@ -36,7 +36,10 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
   return (
     <>
       <Link className="back" href="/#live"><Icon name="arrow" small />All pledges</Link>
-      <PledgeHeader pledge={pledge} />
+      <PledgeHeader
+        pledge={pledge}
+        float={isGiveBack ? { icon: "shield", title: "Claims checked by email signature", sub: "Season 7 receipts" } : undefined}
+      />
       <section className="pgrid">
         <div className="pcol">
           {isGiveBack && <LineCard />}

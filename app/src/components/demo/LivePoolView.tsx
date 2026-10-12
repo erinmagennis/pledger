@@ -5,6 +5,7 @@ import { PledgeHeader } from "../pledge/PledgeHeader";
 import { HowCard, InPlaceCard } from "../pledge/PledgeCards";
 import { withLivePool, type Pledge } from "@/lib/pledges";
 import { MATCH_POOL, addressUrl, usd, type PoolData } from "@/lib/tempo";
+import { TimeAgo } from "../home/TimeAgo";
 import { TryIt } from "./TryIt";
 import type { GiveResult } from "./give";
 
@@ -75,10 +76,18 @@ export function LivePoolView({ base, initial }: { base: Pledge; initial: PoolDat
   );
 
   const pledge = data ? withLivePool(base, data) : base;
+  const latest = data?.events.find((e) => e.kind === "donated");
+  const float = latest && data
+    ? {
+        icon: "check" as const,
+        title: latest.match && latest.match !== "$0" ? `${latest.match} matched` : `${latest.amount} given`,
+        sub: <><TimeAgo unix={latest.time} renderedAt={data.fetchedAt} /> · on testnet</>,
+      }
+    : undefined;
 
   return (
     <>
-      <PledgeHeader pledge={pledge} />
+      <PledgeHeader pledge={pledge} float={float} />
       <section className="pgrid demo">
         <div className="pcol">
           <TryIt onGiven={onGiven} />

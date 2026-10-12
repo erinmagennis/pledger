@@ -197,3 +197,22 @@ svg.i.sm{width:14px;height:14px}
 .demo-src{color:var(--faint);font-size:13px;margin-top:14px}
 @media(max-width:900px){.try-amounts button{flex:1;padding:10px 0}}
 @media(prefers-reduced-motion:reduce){.try-steps li.now i{animation:none}}
+
+/* polish: tracker feed, header float, sticky pool facts */
+.tfeed{list-style:none;padding:20px 0 0;margin-top:22px;border-top:1px solid var(--line);display:grid;gap:4px}
+.tfeed a{display:flex;align-items:center;gap:12px;text-decoration:none;padding:6px 0;border-radius:var(--r-sm)}
+.tfeed a:hover b{text-decoration:underline;text-underline-offset:3px}
+.tfeed a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.tfeed .av{width:32px;height:32px;margin-right:0;color:#8a4b2b}
+.tfeed .av.ic{background:var(--butter-soft);color:#7a6420}
+.tfeed .tx{display:flex;flex-direction:column;min-width:0}
+.tfeed b{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfeed small{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--faint)}
+.tfeed .tag{font-size:11.5px;font-weight:600;color:#8a4b2b;background:var(--peach-soft);border-radius:999px;padding:1px 8px}
+.tfoot{margin-top:auto;padding-top:22px}
+.tfoot .seg{margin-top:0}
+.mini .r .mini-link{color:var(--accent);font-weight:600;text-align:right;text-underline-offset:3px;white-space:nowrap}
+.phead .phfloat{right:64px;top:50%;transform:translateY(-50%);max-width:300px}
+.phead .phfloat small{display:block}
+@media(min-width:901px){.pgrid.demo .pcol.side{position:sticky;top:24px}}
+@media(max-width:900px){.phead .phfloat{display:none}}
