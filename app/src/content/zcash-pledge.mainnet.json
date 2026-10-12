@@ -1,21 +1,36 @@
 {
-  "network": "Zcash mainnet",
   "networkId": "mainnet",
+  "network": "Zcash mainnet",
   "unit": "ZEC",
-  "published": false,
   "pool": "Ironwood",
-  "address": null,
-  "addressType": "Orchard-only unified address",
-  "viewingKey": null,
+  "address": "u1kxrxkr5gpfycmvz7g2c8cxrucqzftjwuga0d9l2wffqlgffqkulpqlnpfpcnlfm0xjjqe76q3fng04gqlgjvtfrj45e9gdh6g7nesxe75s5k2mkuypqpdx7ty5je9aftnltdkg8azj6utjn68qr88q5ynsnmumkaelk6nszm9cy2e8r5",
+  "addressType": "Shielded unified address",
+  "viewingKey": "uview1fj38sgnsd4fwm5k6muev5zpf5r9s4v4jawr8unqc0nny88xmn8rv45jp3rxk5q4kl8dfxxnstqzjcfumz5lvlayrzp7j6vwfvjv2ld87qs9u333hmkxxc6svj5dsnen0ckggkrm0vsyhsgd4m76pm8lu6y0t4c4v4vmjzv9s0t2p2kgt863e9gsrjhcrqkqagara0jw029px6rxpq79ealrwh9p2w28f2jzwqshwy8jv7ae8ry35gadvm3nlkmytnrezyxueyrlsqhuk3y566u97lysqawxy69a9mp6uctgeh5gk2agp7efapwy0m5wfdjvz5d637555q44964ycnqp8shkee7fz06y99z6fc9du0nd8y329zrng9t6frcpnayhdd5u8exs39hmjddm0syfk9me0dzfapfdg809ax0qw5jwh73exkpvakt8hxy8qkf8jx7g5nysjdl8fm3vg9vcswnxs0xg0nrjrk2s4pf3k873facawm5t6",
   "viewingKeyType": "Unified full viewing key",
-  "birthdayHeight": null,
-  "balanceZat": null,
+  "birthdayHeight": 3507500,
+  "balanceZat": 1686667,
+  "pledgeTx": {
+    "txid": "bd5864527ac6632b9bca204780a408af2a8cf38ead891cca25d8cea9eb66e1a2",
+    "block": 3515736,
+    "date": "2026-10-12",
+    "amountZat": 1686667,
+    "feeZat": 0
+  },
+  "transactions": [
+    {
+      "txid": "bd5864527ac6632b9bca204780a408af2a8cf38ead891cca25d8cea9eb66e1a2",
+      "height": 3515736,
+      "direction": "in",
+      "valueZat": 1686667
+    }
+  ],
   "explorerTxUrl": "https://zecblock.com/tx/",
   "explorerShows": "Fee only. No sender, no recipient, no amount.",
-  "verifiedAt": null,
-  "verifiedBlock": null,
-  "verifiedWith": "zingo-cli",
+  "verifiedAt": "2026-10-12T23:49:59.063Z",
+  "verifiedBlock": 3515742,
+  "verifiedWith": "@ledgerhq/zcash-utils 2.6.0 (viewing key scan)",
   "indexer": "https://zec.rocks:443",
   "verifyCommand": "zingo-cli --chain mainnet --server https://zec.rocks:443 --viewkey <UFVK> --birthday <BIRTHDAY> --waitsync balance",
-  "spendCheck": "No spend capability"
+  "spendCheck": "No spend capability",
+  "published": false
 }

@@ -69,14 +69,16 @@ const fakeMain: ZcashPledgeData = {
 };
 
 describe("Zcash mainnet pledge", () => {
-  it("loads the mainnet JSON as unpublished placeholders", () => {
+  it("loads the real mainnet snapshot, still unpublished", () => {
     expect(ZCASH_BY_NET.mainnet).toBe(ZCASH_MAINNET);
     expect(ZCASH_BY_NET.testnet).toBe(ZCASH);
     expect(ZCASH_MAINNET).toMatchObject({ networkId: "mainnet", network: "Zcash mainnet", unit: "ZEC", published: false, pool: "Ironwood" });
-    expect(ZCASH_MAINNET.address).toBeNull();
-    expect(ZCASH_MAINNET.viewingKey).toBeNull();
-    expect(ZCASH_MAINNET.birthdayHeight).toBeNull();
-    expect(ZCASH_MAINNET.balanceZat).toBeNull();
+    expect(ZCASH_MAINNET.address).toMatch(/^u1[a-z0-9]+$/);
+    expect(ZCASH_MAINNET.viewingKey).toMatch(/^uview1[a-z0-9]+$/);
+    expect(ZCASH_MAINNET.birthdayHeight).toBe(3507500);
+    expect(ZCASH_MAINNET.pledgeTx!.block).toBe(3515736);
+    expect(ZCASH_MAINNET.balanceZat).toBe(ZCASH_MAINNET.pledgeTx!.amountZat);
+    expect(ZCASH_MAINNET.verifyCommand).toContain("--birthday <BIRTHDAY>");
     expect(ZCASH_MAINNET.explorerTxUrl).toBe("https://zecblock.com/tx/");
     expect(ZCASH_MAINNET.indexer).toBe("https://zec.rocks:443");
   });
