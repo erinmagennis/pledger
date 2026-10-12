@@ -130,7 +130,7 @@ const pledges: Pledge[] = [
     ...lineFields({ people: 0, feesCents: 0, paidCents: 0 }),
     activity: [
       { date: "12 Oct 2026", text: "Claims open" },
-      { date: "11 Oct 2026", text: "Pledge made: 50% of winnings" },
+      { date: "11 Oct 2026", text: "Pledge made" },
     ],
     howItWorks: [
       "Send in your Artizen receipt email. Pledger checks its signature, so no screenshots.",

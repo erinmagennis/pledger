@@ -1,6 +1,7 @@
 "use client";
 
 // Live line for the Artizen give-back pledge page: three numbers, then the top 20 and a link to the full line.
+// The section title ("The line") sits outside the card, in the page's shared section head.
 import "./claim.css";
 import Link from "next/link";
 import { Icon } from "@/components/Icons";
@@ -15,10 +16,9 @@ export function LineCard({ initial }: { initial?: LineStats }) {
   return (
     <div className="card linecard">
       <div className="lc-top">
-        <div>
+        <div className="lc-order">
           <span className="k"><span className="live" />Live</span>
-          <h2 style={{ marginTop: 8 }}>The line</h2>
-          <p className="cl-soft" style={{ marginTop: 6 }}>Self-backed claims first, smallest first. Then everyone else, smallest first.</p>
+          <p>Self-backers first, smallest first. Then everyone else, smallest first.</p>
         </div>
         <dl className="lc-stats">
           <div><dt>in line</dt><dd>{st.people}</dd></div>

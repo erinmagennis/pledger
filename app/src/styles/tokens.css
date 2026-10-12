@@ -5,5 +5,6 @@
   --peach:#f3d3bf;--peach-soft:#fbede4;--sage:#cddbc6;--sage-soft:#eaf1e6;--butter:#efe2b4;--butter-soft:#f8f2dc;
   --thread:#93aa8e;
   --r-lg:28px;--r-md:20px;--r-sm:12px;
+  --shadow-soft:0 1px 2px rgba(28,31,29,.04),0 6px 16px -10px rgba(28,31,29,.12);
   --shadow:0 1px 2px rgba(28,31,29,.04),0 8px 24px -8px rgba(28,31,29,.10),0 24px 48px -24px rgba(28,31,29,.10);
 }

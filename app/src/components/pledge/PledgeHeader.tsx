@@ -15,20 +15,25 @@ export function PledgeHeader({
   float,
   sub,
   doors,
+  hideBy,
 }: {
   pledge: Pledge;
   float?: HeaderFloat;
   sub?: ReactNode;
   doors?: HeaderDoor[];
+  /** Hide the "Pledged by" chip when the page shows the funder further down. */
+  hideBy?: boolean;
 }) {
   return (
     <header className={`phead ${pledge.kind}`}>
       <div className="meta-row">
         <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span>
-        <span className="who">
-          <span className="av" style={{ background: WHO_BG[pledge.kind] }}>{pledge.by.initials}</span>
-          Pledged by {pledge.by.name}
-        </span>
+        {!hideBy && (
+          <span className="who">
+            <span className="av" style={{ background: WHO_BG[pledge.kind] }}>{pledge.by.initials}</span>
+            Pledged by {pledge.by.name}
+          </span>
+        )}
       </div>
       <h1>{pledge.title}</h1>
       {sub && <p className="psub">{sub}</p>}

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icons";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
-import { ActivityCard, GiveBackNote, HowCard, HowProof, InPlaceCard } from "@/components/pledge/PledgeCards";
+import { ActivityCard, BackersSection, HowCard, HowItWorksSection, InPlaceCard, SectionHead } from "@/components/pledge/PledgeCards";
 import { LineCard } from "@/components/claim/LineCard";
 import { getLineData } from "@/lib/live";
 import { getPledge, getPledges, lineStats, withLiveLine } from "@/lib/pledges";
@@ -38,18 +38,17 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
         <Link className="back" href="/#live"><Icon name="arrow" small />All pledges</Link>
         <PledgeHeader
           pledge={pledge}
-          sub="Half of Erin's Colosseum winnings go back to people who paid Artizen's 10% fee. Self-backers first, smallest claims first."
-          doors={[
-            { label: "I paid the fee", action: "Check or add your claim", href: "/claim" },
-            { label: "I want to help", action: "Pay someone in line", href: "/claim/line", variant: "ghost" },
-          ]}
+          hideBy
+          sub="For people who paid Artizen's 10% endowment fee in Season 7. People who backed their own project go first."
+          doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/claim" }]}
           float={{ icon: "shield", title: "Claims checked by email signature", sub: "Season 7 receipts" }}
         />
-        <section>
+        <BackersSection />
+        <section className="gb-sec" aria-labelledby="gb-line">
+          <SectionHead id="gb-line" title="The line" />
           <LineCard initial={st} />
         </section>
-        <GiveBackNote />
-        <HowProof pledge={pledge} />
+        <HowItWorksSection pledge={pledge} />
       </>
     );
   }
