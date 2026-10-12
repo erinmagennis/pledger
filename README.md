@@ -12,8 +12,9 @@ Built for Colosseum's Crypto World's Fair (Sep 14 to Oct 12, 2026). Started Oct 
 
 | | Where | What happens |
 |---|---|---|
-| Demo match pool (test money) | [/pledges/test-match-pool](https://pledger.impacthook.org/pledges/test-match-pool) | Press **Try it**. The page makes a throwaway test wallet, fills it with free test money, and gives $5 to $20. The pool matches 1:1 up to $20 per wallet, in the same transaction, with no fee for the donor. The match is locked until 31 Dec 2026 and cannot be taken back before then. No login, no wallet extension. |
+| Demo match pool (test money) | [/pledges/test-match-pool](https://pledger.impacthook.org/pledges/test-match-pool) | Press **Try it with test money**. The page makes a throwaway test wallet, fills it with free test money, and gives $5 to $20. The pool matches 1:1 up to $20 per visitor, in the same transaction, with no fee for the donor. The match is locked until 31 Dec 2026 and cannot be taken back before then. No login, no wallet extension. The demo also shows the whole route, from card to USDC on Tempo to a matched donation, with the card step in Stripe's sandbox. |
 | Artizen give-back (real) | [/pledges/artizen-give-back](https://pledger.impacthook.org/pledges/artizen-give-back) | People who paid Artizen's 10% endowment fee in Season 7 claim it back from half of the builder's Colosseum winnings. They drop in their original receipt emails, and Pledger checks Artizen's DKIM signature on each one, so there are no screenshots and no manual review. Self-backers go first, smallest claims first. Anyone can pay people in line directly on Base, by amount or by the next people in line. |
+| Pay by card (sandbox) | [/claim/line](https://pledger.impacthook.org/claim/line) | Pay by card: Stripe's onramp sells USDC on Base and sends it straight to the person's wallet, which Pledger locks as the destination (sandbox mode for the hackathon). |
 
 ## How it works
 
@@ -30,7 +31,7 @@ flowchart LR
 
 - **Match pools on Tempo** (`contracts/`): the sponsor deposits the match, which stays locked until a set date. Each donation is matched up to a ratio and a per-donor cap, then donation and match go to the recipient together with a receipt memo. Donors pay no fee (Tempo's fee sponsor relay).
 - **Claims from email receipts** (`verify/`, `app/src/lib/verify/`): only a valid signature from artizen.fund that matches the sender counts. The fingerprint of each email can be claimed once. A creator's "You sold" email proves a purchase was self-backed, and it never adds money.
-- **Payments on Base** (`app/src/lib/base.ts`): a payment counts when a native USDC transfer to the claimant appears in a successful transaction. Pay inside Pledger, paste a transaction link, or pay by card through Stripe's onramp with the claimant's wallet locked as the destination (test mode pending Stripe approval).
+- **Payments on Base** (`app/src/lib/base.ts`): a payment counts when a native USDC transfer to the claimant appears in a successful transaction. Pay inside Pledger, paste a transaction link, or pay by card through Stripe's onramp with the claimant's wallet locked as the destination. Card payments are live in sandbox mode for the hackathon.
 - **Public records** (`app/src/lib/eas.ts`): each checked claim and each payment is attested on Base with EAS. Records hold a fingerprint, project, fee and status, never personal data.
 - **Privacy**: Pledger stores a fingerprint of each receipt, the project, date and fee, the wallet and the display choice. Never the email or its contents.
 

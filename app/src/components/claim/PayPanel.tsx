@@ -19,8 +19,19 @@ async function recordPayment(claimAddress: string, txHash: string): Promise<stri
   return `Payment of ${formatCents(j.amountCents)} recorded.`;
 }
 
-/** Pay one person in line with USDC on Base, or record a payment made elsewhere. */
-export function PayPanel({ entry, onPaid }: { entry: LineEntry; onPaid: () => void }) {
+/** What this person owes right now across all their places, from the live line. */
+async function currentOwed(pid: string): Promise<number> {
+  const res = await fetch("/api/line", { cache: "no-store" });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !Array.isArray(j.line)) throw new Error(j.error || "Could not load the line");
+  return (j.line as LineEntry[]).filter((e) => e.pid === pid).reduce((s, e) => s + Math.max(0, e.feeCents - e.paidCents), 0);
+}
+
+/**
+ * Pay one person in line with USDC on Base, or record a payment made elsewhere.
+ * `owedCents` is everything the person still owes (a payment only counts when it is the full amount).
+ */
+export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedCents: number; onPaid: () => void }) {
   const [open, setOpen] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,7 +47,7 @@ export function PayPanel({ entry, onPaid }: { entry: LineEntry; onPaid: () => vo
   const write = useWriteContract();
   const client = usePublicClient({ chainId: base.id });
 
-  const remaining = Math.max(0, entry.feeCents - entry.paidCents);
+  const remaining = Math.max(0, owedCents);
   if (entry.status === "paid") return null;
 
   async function openPanel() {
@@ -59,6 +70,12 @@ export function PayPanel({ entry, onPaid }: { entry: LineEntry; onPaid: () => vo
     setMsg(null);
     try {
       if (chainId !== base.id) await switchChain.mutateAsync({ chainId: base.id });
+      // Someone else may have paid this person since the page loaded.
+      if ((await currentOwed(entry.pid)) !== remaining) {
+        setErr("The line changed, check it again");
+        onPaid();
+        return;
+      }
       const tx = await write.mutateAsync({
         address: BASE_USDC,
         abi: USDC_ABI,
@@ -68,12 +85,33 @@ export function PayPanel({ entry, onPaid }: { entry: LineEntry; onPaid: () => vo
       });
       setHash(tx);
       setMsg("Sent. Waiting for Base to confirm…");
-      if (client) await client.waitForTransactionReceipt({ hash: tx });
+      if (client) {
+        const receipt = await client.waitForTransactionReceipt({ hash: tx });
+        if (receipt.status !== "success") {
+          setHash(null); // nothing moved, so paying again is safe
+          throw new Error("That payment failed on Base");
+        }
+      }
       setMsg(await recordPayment(address, tx));
       onPaid();
     } catch (e) {
       const m = e instanceof Error ? e.message : "Payment failed";
       setErr(/reject|denied/i.test(m) ? "Cancelled in your wallet" : m.split("\n")[0]!);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Re-check the payment already sent, instead of sending a second one. */
+  async function checkAgain() {
+    if (!address || !hash) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      setMsg(await recordPayment(address, hash));
+      onPaid();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not check that payment");
     } finally {
       setBusy(false);
     }
@@ -116,10 +154,16 @@ export function PayPanel({ entry, onPaid }: { entry: LineEntry; onPaid: () => vo
             </div>
           ) : (
             <div className="cl-row">
-              <button className="btn btn-primary" disabled={!address || busy || remaining === 0} onClick={pay}>
-                {busy ? "Working…" : `Pay ${formatCents(remaining)}`}
-                <span className="arr"><Icon name="arrow" /></span>
-              </button>
+              {hash ? (
+                <button className="btn btn-primary" disabled={busy} onClick={checkAgain}>
+                  {busy ? "Working…" : "Check again"}
+                </button>
+              ) : (
+                <button className="btn btn-primary" disabled={!address || busy || remaining === 0} onClick={pay}>
+                  {busy ? "Working…" : `Pay ${formatCents(remaining)}`}
+                  <span className="arr"><Icon name="arrow" /></span>
+                </button>
+              )}
             </div>
           )}
           <CardPay entry={entry} />

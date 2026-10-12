@@ -45,8 +45,8 @@ h1 em{font-weight:500}
 .artslot{position:absolute;inset:0 0 40px 30px;border-radius:50%;display:grid;place-items:center;color:var(--faint);font-size:13px;border:1.5px dashed rgba(28,31,29,.15)}
 .float{position:absolute;background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow);padding:18px 20px}
 .f1{left:0;bottom:0;width:300px}
-.f1 .row{display:flex;justify-content:space-between;align-items:center}
-.f1 .t{font-weight:600}
+.f1 .t{font-weight:600;display:block}
+.f1 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.f1 .chips .chip.demo{margin-left:0}
 .chip{font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
 .chip.matching{background:var(--peach-soft);color:#8a4b2b}.chip.prize{background:var(--sage-soft);color:#2f5a3e}.chip.give-back{background:var(--butter-soft);color:#7a6420}
 .f1 .amt{font-size:30px;font-weight:600;letter-spacing:-.02em;margin-top:10px}
@@ -64,7 +64,7 @@ section{padding-top:28px;position:relative;z-index:1}
 .tracker{grid-column:span 1;display:flex;flex-direction:column}
 .k{font-size:14px;color:var(--soft);display:flex;align-items:center;gap:8px}
 .big{font-size:64px;font-weight:600;letter-spacing:-.04em;line-height:1.05;margin-top:10px}
-.testnet-line{color:var(--soft);font-size:15px;margin-top:6px}
+.testnet-line{color:var(--soft);font-size:15px;margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.testnet-line .chip.demo{margin-left:0}
 .ppl{display:flex;align-items:center;gap:10px;margin-top:10px}.stack{display:flex}.stack .av{margin-right:-8px;border:2px solid #fff;width:28px;height:28px}.ppl .k{margin-left:12px}
 .spark{width:100%;height:90px;margin-top:22px;display:block}.spark.flat{height:10px;margin-top:auto;padding-top:22px;box-sizing:content-box}
 .seg{display:flex;gap:3px;height:8px;margin-top:18px}.seg i{border-radius:99px}
@@ -191,6 +191,13 @@ svg.i.sm{width:14px;height:14px}
 .try-error{margin-top:18px}
 .try-error p{color:#8a4b2b;background:var(--peach-soft);border-radius:var(--r-sm);padding:12px 14px;font-size:15px}
 .try-error .ctas{margin-top:14px}
+/* Card step of the demo route (TryIt CardFund); claim.css is not loaded on this page */
+.try-card{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.try-card-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.chip.try-test{background:var(--butter-soft);color:#7a6420}
+.try-card-pay{display:grid;gap:12px;margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);padding:16px}
+.try-card-err{color:#8a4b2b;font-size:15px}
+.try-onramp{min-height:420px;width:100%;max-width:520px}
 .demo-tx{text-decoration:none;min-width:0;overflow-wrap:anywhere}
 .demo-tx:hover{text-decoration:underline;text-underline-offset:3px}
 .demo-empty{color:var(--soft);margin-top:12px}

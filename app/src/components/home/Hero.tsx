@@ -17,7 +17,7 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
         <p className="sub">See the money behind every pledge, and know when it lands.</p>
         <div className="ctas">
           <Button href="/make">Make a pledge</Button>
-          <Button href="/#live" variant="ghost">See live pledges</Button>
+          <Button href="/pledges/test-match-pool" variant="ghost">Try the demo</Button>
         </div>
       </div>
       <div className="stage">
@@ -32,9 +32,10 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
           </div>
         )}
         <div className="float f1">
-          <div className="row">
-            <span className="t">{featured.title}</span>
-            <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span> {featured.demo && <span className="chip demo">Demo · test money</span>}
+          <span className="t">{featured.title}</span>
+          <div className="chips">
+            <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span>
+            {featured.demo && <span className="chip demo">Demo · test money</span>}
           </div>
           {pool ? (
             <>

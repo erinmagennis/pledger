@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { checkClaimSignature, displayLabel, isDisplayMode, NEXT_UPDATE, type ClaimPayload } from "@/lib/claims";
+import { checkClaimSignature, displayLabel, isDisplayMode, nameProblem, NEXT_UPDATE, NO_FEE, type ClaimPayload } from "@/lib/claims";
 import { checkUploads, loadLine, readUploads } from "@/lib/claims-server";
 import { verifyOnBase } from "@/lib/base";
 import { recordClaims } from "@/lib/eas";
@@ -37,13 +37,17 @@ export async function POST(req: Request) {
   let payload: ClaimPayload;
   try {
     payload = JSON.parse(String(form.get("payload") ?? ""));
-    if (!Array.isArray(payload.fingerprints) || typeof payload.payout !== "string" || typeof payload.timestamp !== "number") throw 0;
+    if (!Array.isArray(payload.fingerprints) || !payload.fingerprints.every((f) => typeof f === "string") || typeof payload.payout !== "string" || typeof payload.timestamp !== "number") throw 0;
     if (!payload.display || !isDisplayMode(payload.display.mode) || typeof payload.display.name !== "string") throw 0;
   } catch {
     return bad("Claim details are missing");
   }
   if (payload.noChargeback !== true) return bad("Confirm you have not reversed or charged back this payment");
   if (payload.notRestrictedRegion !== true) return bad("Confirm you are not in a restricted region");
+  if (payload.display.mode !== "project") {
+    const problem = nameProblem(payload.display.name);
+    if (problem) return bad(problem);
+  }
   let label: string | null;
   try {
     label = displayLabel(payload.display.mode, payload.display.name);
@@ -61,6 +65,8 @@ export async function POST(req: Request) {
     return bad("Could not check the files. Try again.", 500);
   }
   const claimable = rows.filter((r) => r.ok && r.kind === "receipt" && r.fingerprint && r.toHash && r.date && r.project && r.feeCents !== undefined);
+  // checkUploads already marks $0 receipts; this is the last guard before storing.
+  if (claimable.some((r) => r.feeCents === 0)) return bad(NO_FEE);
 
   const sig = await checkClaimSignature({
     payload,

@@ -2,7 +2,7 @@
 // test-match-pool from Tempo testnet (withLivePool), artizen-give-back from the
 // Supabase line (withLiveLine), and the home tracker from both (computeTotals).
 // Pure: no server imports, safe for client components and tests.
-import { formatCents, type LineEntry, type PaymentRecord } from "./claims";
+import { fillPerson, formatCents, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
 
 // Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
 const TEMPO_EXPLORER = "https://explore.testnet.tempo.xyz";
@@ -61,7 +61,7 @@ export function lineStats(line: LineEntry[]): LineStats {
   return {
     people: new Set(line.map((e) => e.pid)).size,
     feesCents: line.reduce((s, e) => s + e.feeCents, 0),
-    paidCents: line.reduce((s, e) => s + e.paidCents, 0),
+    paidCents: paidFromLine(line),
   };
 }
 
@@ -110,7 +110,7 @@ const pledges: Pledge[] = [
     ],
     inPlace: [
       { label: "Match put in place", value: "$500", ok: true },
-      { label: "Match rule", value: "1:1, up to $20 per wallet" },
+      { label: "Match rule", value: "1:1, up to $20 per visitor" },
       { label: "In place until", value: "31 December 2026" },
       ...POOL_ROWS,
       { label: "Chain", value: "Tempo testnet" },
@@ -118,7 +118,7 @@ const pledges: Pledge[] = [
     activity: [],
     howItWorks: [
       "The $500 match is locked until 31 December 2026. It cannot be taken back before then.",
-      "Each donation is matched 1:1, up to $20 per wallet.",
+      "Each donation is matched 1:1, up to $20 per visitor.",
       "Donation and match go to Demo project together, in the same transaction.",
     ],
     action: { label: "Try it with test money", href: "#try" },
@@ -198,7 +198,7 @@ export function withLivePool(pledge: Pledge, live: LivePool): Pledge {
         ? { date: dateLabel(e.time), text: `Match of ${e.amount} put in place`, amount: e.amount, href: TX_URL + e.tx }
         : {
             date: dateLabel(e.time),
-            text: e.match === "$0" ? `${visitor(e.who)} gave ${e.amount}, match used up` : `${visitor(e.who)} gave ${e.amount}, matched ${e.match}`,
+            text: e.match === "$0" ? `${visitor(e.who)} gave ${e.amount}, this visitor’s $20 match was already used` : `${visitor(e.who)} gave ${e.amount}, matched ${e.match}`,
             amount: e.amount,
             href: TX_URL + e.tx,
           },
@@ -265,7 +265,8 @@ export function avatarInitials(label: string): string {
 }
 
 export function computeTotals(pool: PoolTotals | null, line: LineEntry[], payments: PaymentRecord[]): Totals {
-  const paidCents = payments.reduce((s, p) => s + unitsCents(p.amount_units), 0);
+  // Same capped number as the pledge page; raw payments only feed the chart and the feed.
+  const paidCents = paidFromLine(line);
   const testnetCents = pool ? unitsCents(pool.donatedUnits) + unitsCents(pool.matchedUnits) : 0;
 
   const byDay = new Map<string, number>();
@@ -273,7 +274,21 @@ export function computeTotals(pool: PoolTotals | null, line: LineEntry[], paymen
     const day = iso.slice(0, 10);
     byDay.set(day, (byDay.get(day) ?? 0) + cents);
   };
-  for (const p of payments) add(new Date(p.block_time).toISOString(), unitsCents(p.amount_units));
+  // Give-backs on the chart use the same capped numbers as the headline: each person's payments,
+  // in time order, fill their entries (fee cap, 99.5% forgiveness), and a day only gains what that adds.
+  const feesBy = new Map<string, number[]>();
+  for (const e of line) feesBy.set(e.shortAddress, [...(feesBy.get(e.shortAddress) ?? []), e.feeCents]);
+  const credited = (fees: number[], units: bigint) => fillPerson(fees, units).reduce((s, f) => s + f.paidCents, 0);
+  const runUnits = new Map<string, bigint>();
+  const runCents = new Map<string, number>();
+  for (const p of [...payments].sort((a, b) => Date.parse(a.block_time) - Date.parse(b.block_time))) {
+    const who = shortAddress(p.to_address.toLowerCase());
+    const units = (runUnits.get(who) ?? 0n) + paymentUnits(p.amount_units);
+    runUnits.set(who, units);
+    const cents = credited(feesBy.get(who) ?? [], units);
+    add(new Date(p.block_time).toISOString(), cents - (runCents.get(who) ?? 0));
+    runCents.set(who, cents);
+  }
   for (const e of pool?.events ?? []) {
     if (e.kind === "donated") add(new Date(e.time * 1000).toISOString(), unitsCents(e.amountUnits) + unitsCents(e.matchUnits));
   }
@@ -294,7 +309,7 @@ export function computeTotals(pool: PoolTotals | null, line: LineEntry[], paymen
 
   const byKind = (
     [
-      { kind: "matching", label: "Matching (testnet)", cents: testnetCents },
+      { kind: "matching", label: "Demo match pool (test money)", cents: testnetCents },
       { kind: "give-back", label: "Give-backs", cents: paidCents },
     ] as Totals["byKind"]
   ).filter((k) => k.cents > 0);
@@ -304,14 +319,14 @@ export function computeTotals(pool: PoolTotals | null, line: LineEntry[], paymen
       .filter((e) => e.kind === "donated" && e.tx && e.who)
       .map((e) => ({
         av: e.who!.slice(2, 4).toUpperCase(),
-        text: `${visitor(e.who!)} gave ${e.amount ?? formatCents(unitsCents(e.amountUnits))}`,
+        text: `A visitor gave ${e.amount ?? formatCents(unitsCents(e.amountUnits))}`,
         time: e.time,
         testnet: true,
         href: TX_URL + e.tx,
       })),
     ...payments.map((p) => ({
       av: null,
-      text: `Give-back of ${formatCents(unitsCents(p.amount_units))} paid to ${shortWho(p.to_address)}`,
+      text: `Give-back of ${formatCents(unitsCents(p.amount_units))} paid`,
       time: Math.floor(new Date(p.block_time).getTime() / 1000),
       testnet: false,
       href: BASESCAN_TX + p.tx_hash,

@@ -1,6 +1,6 @@
 # Edge cases and how Pledger handles them
 
-Status key: **TESTED** = a test or a real-data check exists. **RULE** = built into the design, test comes with the app. **ASK** = needs the pledge owner's decision.
+Status key: **TESTED** = a test or a real-data check exists. **RULE** = built into the code, test comes with the app. **PLANNED** = decided, not built yet. **ASK** = needs the pledge owner's decision.
 
 ## Receipt check (Artizen emails, DKIM)
 
@@ -22,8 +22,8 @@ Still to build tests for:
 - Forwarded email (signature broken): the user sees "Download the original from your inbox" with steps for Gmail, Proton, Yahoo and Outlook. RULE
 - Artizen email that is not a receipt (newsletter, "You sold" without a matching buyer receipt): it can prove ownership but never adds money. RULE
 - Two identical purchases on the same day (same project, same amount): different Message-IDs, so both count. RULE
-- Fee taken from the "Endowment fee" line, never computed. Card processing fees are not claimable. If the line is missing, the email goes to manual review. RULE
-- Artizen's signing key removed from DNS later: new checks stop working, and the email goes to a manual review queue. Verify early and store the result. RULE
+- Fee taken from the "Endowment fee" line, never computed. Card processing fees are not claimable. If the line is missing, the email is not counted (RULE); sending it to manual review instead is PLANNED.
+- Artizen's signing key removed from DNS later: new checks stop working. Verify early and store the result. A manual review queue for these emails is PLANNED.
 - Wrong file type, oversized files, zip files, HTML-only emails, encoded bodies, non-English names: clear error or decode correctly. RULE
 - The same email uploaded by two different people: the first verified claim keeps it, and the second sees "already claimed" with a contact link. RULE
 - Pledge owner's own receipts: excluded from the line, used only for the demo. RULE
@@ -40,28 +40,29 @@ Still to build tests for:
 
 - One place per person. Self-backed total first, then the rest, smallest first. Ties go to whoever submitted earlier. RULE
 - Display: full name, initials (default) or project only. Email addresses are never shown, and only a hash is stored. RULE
-- A claimant loses their wallet: a payout-address change needs a signature from the old wallet. If the old wallet is lost, the change goes to manual review. RULE
+- A claimant loses their wallet: a payout-address change needs a signature from the old wallet. If the old wallet is lost, the change goes to manual review. PLANNED
 
 ## Payments (mark paid)
 
 - Pasted transaction on the wrong chain, wrong token (only native USDC on Base counts), reverted or still pending: rejected with the reason. RULE
-- Paid less than owed: shown as "Paid $X of $Y", and the claim stays in line for the rest. Paid more than owed: recorded, with a note. RULE
+- Amount: a payment counts only if it is the person's full remaining 10%, give or take 2%, sent after they joined the line, from someone other than themselves. Any other amount is rejected with "Does not match what is owed". RULE
+- Paid more than owed: recorded, with a note. PLANNED (the exact-amount rule rejects it for now)
 - Paid to the wrong address: not counted. RULE
 - The same transaction pasted twice, or for two claims: counted once. A batch transaction paying several people at once: each transfer is matched to its claim. RULE
-- Payment arrives before the claim is verified: held as "received, checking". RULE
+- Payment arrives before the claim is verified: held as "received, checking". PLANNED (for now it is rejected as "Sent before this claim was made")
 - Payout address is an exchange deposit address: warning shown before saving. RULE
-- Sanctions screening on payout addresses before the pledge owner pays. RULE
+- Sanctions screening on payout addresses before the pledge owner pays. PLANNED
 
 ## Public records (EAS on Base)
 
-- An attestation fails (out of gas, network error): the claim is still saved and the attestation retries. The page shows "record pending". RULE
+- An attestation fails (out of gas, network error): the claim is still saved. Retrying the attestation and showing "record pending" is PLANNED.
 - No personal data on chain: only the fingerprint, fee, project, group and status. RULE
 
 ## Demo match pool ("Try it", test money)
 
 - One person making many throwaway wallets: limited per visitor, a small match per wallet, and Pledger can top up the pool. RULE
 - Faucet or fee sponsor down: a clear message plus a backup pre-funded demo wallet. RULE
-- Match used up: "This match is used up" shows, and donations still go through. RULE
+- Match used up: "Your $20 match was already used" shows, and donations still go through. RULE
 - Lock date passing while judges review (winners by Dec 5): the demo pool is locked until 31 Dec 2026. RULE
 - Browser storage blocked (private mode): the wallet lives in memory for the visit. RULE
 

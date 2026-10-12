@@ -1,6 +1,6 @@
 /* Pledger tokens, extracted from approved home v3 (2026-10-12). Pages consume these; no local redefinitions. */
 :root{
-  --ground:#f6f4ef;--card:#ffffff;--ink:#1c1f1d;--soft:#5d625e;--faint:#8a8f8b;
+  --ground:#f6f4ef;--card:#ffffff;--ink:#1c1f1d;--soft:#5d625e;--faint:#6b706c;
   --line:rgba(28,31,29,.09);--accent:#1f4d3a;--accent-2:#2c6a50;
   --peach:#f3d3bf;--peach-soft:#fbede4;--sage:#cddbc6;--sage-soft:#eaf1e6;--butter:#efe2b4;--butter-soft:#f8f2dc;
   --thread:#93aa8e;

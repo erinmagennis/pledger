@@ -81,13 +81,13 @@ export function LivePoolView({ base, initial }: { base: Pledge; initial: PoolDat
     ? {
         icon: "check" as const,
         title: latest.match && latest.match !== "$0" ? `${latest.match} matched` : `${latest.amount} given`,
-        sub: <><TimeAgo unix={latest.time} renderedAt={data.fetchedAt} /> · on testnet</>,
+        sub: <><TimeAgo unix={latest.time} renderedAt={data.fetchedAt} /> · test money</>,
       }
     : undefined;
 
   return (
     <>
-      <PledgeHeader pledge={pledge} float={float} />
+      <PledgeHeader pledge={pledge} float={float} hideAction />
       <section className="pgrid demo">
         <div className="pcol">
           <TryIt onGiven={onGiven} />

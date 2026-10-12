@@ -1,52 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { loadStripeOnramp, type OnrampSessionResult, type StripeOnramp } from "@stripe/crypto";
+import { useCallback, useState } from "react";
+import type { OnrampSessionResult } from "@stripe/crypto";
 import type { LineEntry } from "@/lib/claims";
-
-const PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
-const TEST_MODE = PK.startsWith("pk_test");
-const NARROW = 600;
-
-let onrampPromise: Promise<StripeOnramp | null> | null = null;
-const getOnramp = () => (onrampPromise ??= loadStripeOnramp(PK).catch(() => null));
-
-// CryptoElements / OnrampElement, as in Stripe's embedded onramp guide.
-const Ctx = createContext<{ onramp: StripeOnramp | null; failed: boolean }>({ onramp: null, failed: false });
-
-function CryptoElements({ stripeOnramp, children }: { stripeOnramp: Promise<StripeOnramp | null>; children: ReactNode }) {
-  const [ctx, setCtx] = useState<{ onramp: StripeOnramp | null; failed: boolean }>({ onramp: null, failed: false });
-  useEffect(() => {
-    let live = true;
-    stripeOnramp.then((o) => live && setCtx(o ? { onramp: o, failed: false } : { onramp: null, failed: true }));
-    return () => {
-      live = false;
-    };
-  }, [stripeOnramp]);
-  return <Ctx.Provider value={ctx}>{children}</Ctx.Provider>;
-}
-
-function OnrampElement({ clientSecret, onUpdate, onFail }: { clientSecret: string; onUpdate: (s: OnrampSessionResult) => void; onFail: () => void }) {
-  const { onramp, failed } = useContext(Ctx);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (failed) onFail();
-  }, [failed, onFail]);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !onramp) return;
-    el.innerHTML = "";
-    try {
-      onramp
-        .createSession({ clientSecret })
-        .addEventListener("onramp_session_updated", (e) => onUpdate(e.payload.session))
-        .mount(el);
-    } catch {
-      onFail();
-    }
-  }, [clientSecret, onramp, onUpdate, onFail]);
-  return <div ref={ref} className="cl-onramp" />;
-}
+import { CryptoElements, getOnramp, NARROW, OnrampElement, PK, TEST_MODE } from "../pay/StripeOnramp";
 
 /** Pay one person by card. Stripe sells USDC on Base and sends it straight to their wallet. */
 export function CardPay({ entry }: { entry: LineEntry }) {
@@ -74,7 +31,8 @@ export function CardPay({ entry }: { entry: LineEntry }) {
       const r = await fetch("/api/onramp/session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ payeeId: entry.pid, group: entry.group }),
+        // No group: the payment rule checks the person's full remaining, so the session asks for that.
+        body: JSON.stringify({ payeeId: entry.pid }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.clientSecret) throw new Error(j.error || "Could not start a card payment");
@@ -100,6 +58,7 @@ export function CardPay({ entry }: { entry: LineEntry }) {
         </button>
         {TEST_MODE && <span className="chip cl-wait cl-test">Test mode</span>}
       </div>
+      <span className="cl-soft">Keep the amount as shown. A different amount cannot be matched to this person.</span>
       {open && (
         <div className="cl-cardpay" role="region" aria-label="Pay by card">
           <span className="cl-soft">Stripe sends USDC on Base straight to {entry.label}. Pledger never holds the money.</span>

@@ -12,7 +12,13 @@ import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
 import { formatCents } from "@/lib/claims";
 
 type PreviewTransfer = { address: string; shortAddress: string; label: string; places: number[]; amountUnits: string; amountCents: number };
-type Preview = { transfers: PreviewTransfer[]; totalCents: number; leftoverCents: number };
+type Preview = { transfers: PreviewTransfer[]; totalCents: number; leftoverCents: number; nextCents: number };
+/** A transfer that was sent, with the tx hashes to check it against (best match first). */
+type Sent = { t: PreviewTransfer; txs: string[] };
+
+const LINE_CHANGED = "The line changed, check it again";
+const sameTransfers = (a: PreviewTransfer[], b: PreviewTransfer[]) =>
+  a.length === b.length && a.every((t, i) => t.address === b[i]!.address && t.amountUnits === b[i]!.amountUnits);
 
 const AMOUNTS = [25, 50, 100] as const;
 const PEOPLE = [1, 3, 5] as const;
@@ -20,7 +26,10 @@ const PEOPLE = [1, 3, 5] as const;
 const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
 
 /** Record one person's share of a tx. Already recorded counts as done. */
-async function record(address: string, txHash: string): Promise<{ ok: true } | { ok: false; error: string }> {
+/** A failure worth checking again later: not on Base yet, or the server had trouble. Anything else is the rule saying no. */
+const retryable = (status: number, error: string) => status >= 500 || /not found/i.test(error);
+
+async function record(address: string, txHash: string): Promise<{ ok: true } | { ok: false; error: string; final: boolean }> {
   const res = await fetch("/api/payments/verify", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -29,7 +38,8 @@ async function record(address: string, txHash: string): Promise<{ ok: true } | {
   if (res.ok) return { ok: true };
   const j = await res.json().catch(() => ({}));
   if (res.status === 409 && /already recorded/i.test(j.error ?? "")) return { ok: true };
-  return { ok: false, error: j.error || "Could not check that payment" };
+  const error = j.error || "Could not check that payment";
+  return { ok: false, error, final: !retryable(res.status, error) };
 }
 
 function shortErr(e: unknown, fallback: string) {
@@ -58,6 +68,9 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
   const [done, setDone] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [hashes, setHashes] = useState<string[]>([]);
+  // Sent but not yet recorded. While this holds anything, the button checks again instead of sending.
+  const [pending, setPending] = useState<Sent[]>([]);
+  const [callsId, setCallsId] = useState<{ id: string; list: PreviewTransfer[] } | null>(null);
 
   const config = useConfig();
   const { isConnected, chainId } = useConnection();
@@ -112,27 +125,40 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
 
   const transfers = preview?.transfers ?? [];
   const count = transfers.length;
+  /** No one owes anything: hide the wallet buttons. */
+  const lineEmpty = !!preview && !count && !preview.nextCents;
+  /** A payment was sent and is not recorded yet. */
+  const waiting = pending.length > 0 || !!callsId;
 
-  async function recordAll(list: PreviewTransfer[], txs: string[]): Promise<string[]> {
+  /** Pair each transfer with the batch's hashes. Prefer the matching receipt when the wallet sent one tx per call. */
+  const pairUp = (list: PreviewTransfer[], txs: string[]): Sent[] =>
+    list.map((t, i) => ({ t, txs: txs.length === list.length ? [txs[i]!, ...txs.filter((_, j) => j !== i)] : txs }));
+
+  /** Record each sent transfer. Returns the ones still worth checking again, with every error.
+   * A transfer every hash of which got a final rule rejection is dropped, so Send comes back. */
+  async function recordAll(items: Sent[]): Promise<{ left: Sent[]; failed: string[] }> {
+    const left: Sent[] = [];
     const failed: string[] = [];
-    for (let i = 0; i < list.length; i++) {
-      const t = list[i]!;
-      // Prefer the matching receipt when the wallet sent one tx per call, then try the rest.
-      const order = txs.length === list.length ? [txs[i]!, ...txs.filter((_, j) => j !== i)] : txs;
+    for (const item of items) {
       let last = "Could not check that payment";
       let ok = false;
-      for (const h of order) {
-        const r = await record(t.address, h);
+      let final = true;
+      for (const h of item.txs) {
+        const r = await record(item.t.address, h);
         if (r.ok) {
           ok = true;
           break;
         }
         last = r.error;
+        if (!r.final) final = false;
         if (/003 update/.test(r.error)) break;
       }
-      if (!ok) failed.push(`${t.label || t.shortAddress}: ${last}`);
+      if (!ok) {
+        if (!final) left.push(item);
+        failed.push(`${item.t.label || item.t.shortAddress}: ${last}`);
+      }
     }
-    return failed;
+    return { left, failed };
   }
 
   async function sendBatch(list: PreviewTransfer[]): Promise<string[]> {
@@ -144,11 +170,22 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         data: encodeFunctionData({ abi: USDC_ABI, functionName: "transfer", args: [t.address as Hex, BigInt(t.amountUnits)] }),
       })),
     });
+    // From here the money may be on its way, so never offer a second send for this batch.
+    setCallsId({ id, list });
+    return confirmBatch(id, list);
+  }
+
+  async function confirmBatch(id: string, list: PreviewTransfer[]): Promise<string[]> {
     setProgress("Sent. Waiting for Base to confirm…");
     const status = await waitForCallsStatus(config, { id, timeout: 180_000 });
     const txs = [...new Set((status.receipts ?? []).map((r) => r.transactionHash))];
     setHashes(txs);
-    if (status.status !== "success" || !txs.length) throw new Error("The batch did not go through on Base");
+    if (status.status !== "success" || !txs.length) {
+      setCallsId(null); // failed on Base: nothing moved
+      throw new Error("The batch did not go through on Base");
+    }
+    setCallsId(null);
+    setPending(pairUp(list, txs));
     return txs;
   }
 
@@ -166,12 +203,19 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
           args: [t.address as Hex, BigInt(t.amountUnits)],
           chainId: base.id,
         });
-        if (client) await client.waitForTransactionReceipt({ hash: h });
+        const item = { t, txs: [h] };
+        setPending((p) => [...p, item]);
         txs.push(h);
-        sent.push(t);
         setHashes([...txs]);
+        const receipt = client ? await client.waitForTransactionReceipt({ hash: h }) : null;
+        if (receipt?.status !== "success") {
+          if (receipt) setPending((p) => p.filter((x) => x !== item)); // reverted: nothing moved
+          throw new Error(receipt ? "That payment failed on Base" : "Could not confirm on Base. Check again in a minute.");
+        }
+        sent.push(t);
         setProgress(`${i + 1} of ${list.length} sent`);
         const r = await record(t.address, h);
+        if (r.ok || r.final) setPending((p) => p.filter((x) => x !== item));
         if (!r.ok) setErr(`${t.label || t.shortAddress}: ${r.error}`);
       } catch (e) {
         if (!sent.length) throw e;
@@ -182,8 +226,39 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     return { txs, sent };
   }
 
+  /** Same split as the preview right now, or null when it moved. */
+  async function stillSame(list: PreviewTransfer[]): Promise<boolean> {
+    const res = await fetch("/api/line/allocate", { method: "POST", headers: { "content-type": "application/json" }, body: key });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error || "Could not load the line");
+    setPreview(j as Preview);
+    return sameTransfers(list, (j as Preview).transfers);
+  }
+
+  /** Re-check payments already sent, instead of sending again. */
+  async function checkAgain() {
+    setBusy(true);
+    setErr(null);
+    try {
+      // A batch that timed out has no hashes yet: wait for Base first.
+      const items = callsId ? pairUp(callsId.list, await confirmBatch(callsId.id, callsId.list)) : pending;
+      setProgress("Checking each payment…");
+      const r = await recordAll(items);
+      setPending(r.left);
+      setProgress(null);
+      if (r.failed.length) setErr(r.failed.join(" · "));
+      else setDone("Payments recorded. Thank you.");
+      onPaid();
+    } catch (e) {
+      setProgress(null);
+      setErr(shortErr(e, "Could not check that payment"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function send() {
-    if (!count || !preview) return;
+    if (!count || !preview || pending.length || callsId) return;
     const list = transfers;
     setBusy(true);
     setErr(null);
@@ -191,6 +266,12 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     setHashes([]);
     try {
       if (chainId !== base.id) await switchChain.mutateAsync({ chainId: base.id });
+      // Another helper may have paid some of these people since the preview loaded.
+      if (!(await stillSame(list))) {
+        setErr(LINE_CHANGED);
+        onPaid();
+        return;
+      }
       let failed: string[] = [];
       let sentCount = list.length;
       let batched = false;
@@ -199,7 +280,9 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
           const txs = await sendBatch(list);
           batched = true;
           setProgress("Checking each payment…");
-          failed = await recordAll(list, txs);
+          const r = await recordAll(pairUp(list, txs));
+          setPending(r.left);
+          failed = r.failed;
         } catch (e) {
           if (!unsupported(e)) throw e;
         }
@@ -271,8 +354,10 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
           <p className="cl-soft">{previewErr}</p>
         ) : !preview ? (
           <p className="cl-soft">Working out who is next…</p>
+        ) : !count && preview.nextCents > 0 ? (
+          <p className="cl-soft">Not enough for the next person ({formatCents(preview.nextCents)}).</p>
         ) : !count ? (
-          <p className="cl-soft">Everyone in line is paid right now.</p>
+          <p className="cl-soft">No one is waiting yet.</p>
         ) : (
           <>
             <ul className={`cl-alloc-list${loading ? " dim" : ""}`}>
@@ -285,7 +370,11 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
               ))}
             </ul>
             {preview.leftoverCents > 0 && (
-              <p className="cl-soft">The line only needs {formatCents(preview.totalCents)} right now, so that is all you send.</p>
+              <p className="cl-soft">
+                {preview.nextCents > 0
+                  ? `${formatCents(preview.leftoverCents)} left over, not enough for the next person (${formatCents(preview.nextCents)}).`
+                  : `The line only needs ${formatCents(preview.totalCents)} right now, so that is all you send.`}
+              </p>
             )}
             <details className="cl-help">
               <summary>Full addresses</summary>
@@ -300,7 +389,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         )}
       </div>
 
-      {!isConnected ? (
+      {lineEmpty && !waiting ? null : !isConnected ? (
         <div className="cl-row" style={{ marginTop: 16 }}>
           {connectors.map((c) => (
             <button key={c.uid} className="btn btn-ghost" onClick={() => connect.mutate({ connector: c, chainId: base.id })}>
@@ -310,11 +399,17 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         </div>
       ) : (
         <div className="cl-row" style={{ marginTop: 16 }}>
-          <button className="btn btn-primary" disabled={busy || loading || !count} onClick={send}>
-            {busy ? "Working…" : count ? `Send ${formatCents(preview!.totalCents)} to ${people(count)}` : "Send"}
-            <span className="arr"><Icon name="arrow" /></span>
-          </button>
-          {count > 1 && <span className="cl-soft">{canBatch ? "One confirm in your wallet." : `${count} confirms in your wallet, one per person.`}</span>}
+          {waiting ? (
+            <button className="btn btn-primary" disabled={busy} onClick={checkAgain}>
+              {busy ? "Working…" : "Check again"}
+            </button>
+          ) : (
+            <button className="btn btn-primary" disabled={busy || loading || !count} onClick={send}>
+              {busy ? "Working…" : count ? `Send ${formatCents(preview!.totalCents)} to ${people(count)}` : "Send"}
+              <span className="arr"><Icon name="arrow" /></span>
+            </button>
+          )}
+          {!waiting && count > 1 && <span className="cl-soft">{canBatch ? "One confirm in your wallet." : `${count} confirms in your wallet, one per person.`}</span>}
         </div>
       )}
       {!isConnected && count > 0 && (

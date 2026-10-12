@@ -44,7 +44,8 @@ export async function POST(req: Request) {
 
   try {
     const line = await loadLine(db);
-    const open = line.filter((e) => e.feeCents > e.paidCents);
+    // Same test as owedUnits: a paid entry (including a forgiven one) owes nothing.
+    const open = line.filter((e) => e.status !== "paid" && e.feeCents > e.paidCents);
     const addresses = await payoutAddressesFor(db, open.map((e) => e.pid));
     const entries: AllocEntry[] = open.flatMap((e) => {
       const address = addresses.get(e.pid);
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
       totalUnits: r.totalUnits.toString(),
       totalCents: unitsToCents(r.totalUnits),
       leftoverCents: unitsToCents(r.leftoverUnits),
+      nextCents: unitsToCents(r.nextUnits),
       requestedCents,
     });
   } catch {

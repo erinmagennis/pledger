@@ -16,6 +16,7 @@ export function PledgeHeader({
   sub,
   doors,
   hideBy,
+  hideAction,
 }: {
   pledge: Pledge;
   float?: HeaderFloat;
@@ -23,6 +24,8 @@ export function PledgeHeader({
   doors?: HeaderDoor[];
   /** Hide the "Pledged by" chip when the page shows the funder further down. */
   hideBy?: boolean;
+  /** Hide the default button when the page body has its own (the demo's Try card). */
+  hideAction?: boolean;
 }) {
   return (
     <header className={`phead ${pledge.kind}`}>
@@ -56,9 +59,11 @@ export function PledgeHeader({
           {pledge.progress !== undefined && (
             <div className="bar"><i style={{ width: `${pledge.progress * 100}%` }} /></div>
           )}
-          <div className="ctas">
-            <Button href={pledge.action.href}>{pledge.action.label}</Button>
-          </div>
+          {!hideAction && (
+            <div className="ctas">
+              <Button href={pledge.action.href}>{pledge.action.label}</Button>
+            </div>
+          )}
         </>
       )}
       {float && (

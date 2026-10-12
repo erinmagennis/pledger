@@ -1,4 +1,5 @@
 // Server-only claim pipeline: verify uploaded .eml files, pair self-backing, mark duplicates.
+import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildLine, friendlyReason, markUnclaimable, parseExcludedHashes, toCents, MAX_FILES, type ClaimRecord, type LineEntry, type PaymentRecord, type ReviewRow } from "./claims";
@@ -57,7 +58,10 @@ export async function checkUploads(uploads: Upload[], db: SupabaseClient | null)
   const paired = pairSelfBacked(receipts, solds).receipts;
   const selfBacked = new Set(paired.filter((p) => p.selfBacked).map((p) => p.fingerprint));
 
-  return marked.map((r, i): CheckedRow => {
+  return marked.map((r0, i): CheckedRow => {
+    const feeCents = r0.kind === "receipt" && r0.endowmentFee !== undefined ? toCents(r0.endowmentFee) : undefined;
+    // A $0 receipt would wait in line forever, so it cannot be claimed.
+    const r = r0.ok && feeCents === 0 ? { ...r0, ok: false, reason: "no-fee" } : r0;
     const f = r.ok ? { message: r.kind === "sold" ? "Sale email, used to check self-backing" : "" } : friendlyReason(r.reason);
     return {
       file: uploads[i]!.name,
@@ -69,7 +73,7 @@ export async function checkUploads(uploads: Upload[], db: SupabaseClient | null)
       fingerprint: r.fingerprint,
       date: r.date,
       project: r.project,
-      feeCents: r.kind === "receipt" && r.endowmentFee !== undefined ? toCents(r.endowmentFee) : undefined,
+      feeCents,
       selfBacked: r.kind === "receipt" ? selfBacked.has(r.fingerprint) : undefined,
       toHash: r.toHash,
       contribution: r.contribution,
@@ -88,8 +92,9 @@ export const CLAIM_COLUMNS = "id,fingerprint,project,purchased_at,fee_cents,self
 /** The line plus the raw payments it was built from (the home tracker sums them). */
 export async function loadLineData(db: SupabaseClient): Promise<{ line: LineEntry[]; payments: PaymentRecord[] }> {
   const [claims, payments] = await Promise.all([
-    db.from("pledger_claims").select(CLAIM_COLUMNS).order("created_at", { ascending: true }),
-    db.from("pledger_payments").select("tx_hash,to_address,amount_units,block_time"),
+    // Supabase returns 1000 rows by default; ask for up to 5000.
+    db.from("pledger_claims").select(CLAIM_COLUMNS).order("created_at", { ascending: true }).range(0, 4999),
+    db.from("pledger_payments").select("tx_hash,to_address,amount_units,block_time").range(0, 4999),
   ]);
   if (claims.error || payments.error) throw new Error("db-read-failed");
   const pays = (payments.data ?? []) as PaymentRecord[];

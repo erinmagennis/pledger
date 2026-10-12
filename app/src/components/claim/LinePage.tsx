@@ -8,6 +8,8 @@ import { PayPanel } from "./PayPanel";
 export function LineWithPay() {
   const { line, loaded, offline, reload } = useLine();
   const [version, setVersion] = useState(0);
+  // A person can hold two places; Pay sends everything they still owe.
+  const owedBy = (pid: string) => line.filter((e) => e.pid === pid).reduce((s, e) => s + Math.max(0, e.feeCents - e.paidCents), 0);
   const refresh = () => {
     reload();
     setVersion((v) => v + 1);
@@ -22,7 +24,7 @@ export function LineWithPay() {
           Or pay one person: press Pay to send USDC on Base straight to them. Pledger checks the payment and updates the line.
         </p>
         {offline && loaded && !line.length ? <p className="cl-empty">The line is not live yet.</p> : (
-          <LineList entries={line} loaded={loaded} renderAction={(e) => <PayPanel entry={e} onPaid={refresh} />} />
+          <LineList entries={line} loaded={loaded} renderAction={(e) => <PayPanel entry={e} owedCents={owedBy(e.pid)} onPaid={refresh} />} />
         )}
       </div>
     </div>

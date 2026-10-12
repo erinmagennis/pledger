@@ -21,7 +21,7 @@ export default function ClaimPage() {
           <div className="card">
             <h2>How it works</h2>
             <ol className="how">
-              <li>Connect a wallet on Base. Payments go there in USDC.</li>
+              <li>Connect a wallet on Base. Payments go there in USDC (a US dollar stablecoin).</li>
               <li>Add the original emails. Each receipt counts once.</li>
               <li>Self-backed claims go first, smallest first. Then everyone else.</li>
             </ol>
@@ -30,8 +30,6 @@ export default function ClaimPage() {
             <h2>What we keep</h2>
             {/* TODO(copy) */}
             <p>A fingerprint of each receipt, the project, date and fee, your wallet and how you want to be shown. Never your email or its contents.</p>
-            <div className="mini">
-            </div>
           </div>
         </div>
       </section>

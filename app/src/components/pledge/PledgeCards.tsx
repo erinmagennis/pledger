@@ -88,7 +88,7 @@ export function BackersSection() {
             <p>
               Artizen was a platform for backing creative, science and public goods projects. It promised
               match funding on every purchase and charged backers a 10% endowment fee. In October 2026 it
-              abruptly shut down. The promised match won&apos;t be paid, and Artizen is keeping the fees.
+              abruptly shut down. There is no sign the promised match will be paid or the fees returned.
             </p>
             <p>Many creators backed their own projects and planned around that match. They lost both.</p>
             <a className="gb-happened-link" href="https://payout-progress-artizen.pages.dev/" target="_blank" rel="noopener noreferrer">
@@ -96,7 +96,7 @@ export function BackersSection() {
             </a>
           </div>
           <p>
-            Send USDC on Base straight to the next people in line. Pledger checks each payment and updates
+            Send USDC (a US dollar stablecoin) on Base straight to the next people in line. Pledger checks each payment and updates
             the line. Pledger never holds the money.
           </p>
           <div className="gb-invite-cta">
@@ -153,7 +153,7 @@ export function ClaimSection() {
 
 /** Proof: a slim, quiet strip at the bottom. Fact chips, then the dated entries, oldest first. */
 export function ProofStrip({ pledge }: { pledge: Pledge }) {
-  const facts = ["Pledge 50% of Colosseum winnings", "Season 7", pledge.chain, `Records public on ${pledge.chain} via EAS`];
+  const facts = ["Pledge 50% of Colosseum winnings", "Season 7", pledge.chain, `Records public on ${pledge.chain}`];
   const dated = [...pledge.activity].reverse();
   return (
     <section className="gb-proof" aria-label="Proof">

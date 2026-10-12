@@ -1,14 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { Hex } from "viem";
+import { useCallback, useRef, useState } from "react";
+import type { Address, Hex } from "viem";
+import type { OnrampSessionResult } from "@stripe/crypto";
 import { Icon } from "../Icons";
+import { CryptoElements, getOnramp, NARROW, OnrampElement, PK, TEST_MODE } from "../pay/StripeOnramp";
 import { RECIPIENT_LABEL, txUrl, usd } from "@/lib/tempo";
 import type { GiveResult } from "./give";
 
 const KEY_STORE = "pledger_demo_key";
 const AMOUNTS = [5, 10, 20] as const;
 const ENOUGH = 20_000_000n; // $20 in 6-decimal units
+const CARD_USD = 20;
 
 type Phase = "idle" | "funding" | "ready" | "giving" | "done" | "error";
 type StepState = "todo" | "now" | "done";
@@ -38,6 +41,7 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
   const [giveStep, setGiveStep] = useState<"approving" | "donating" | "matched" | null>(null);
   const [result, setResult] = useState<GiveResult | null>(null);
   const [error, setError] = useState<string>("");
+  const [address, setAddress] = useState<Address | null>(null);
 
   async function start() {
     setError("");
@@ -52,6 +56,7 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
       }
       keyRef.current = key;
       const address = privateKeyToAccount(key).address;
+      setAddress(address);
 
       const have = await balanceOf(address).catch(() => 0n);
       if (have >= ENOUGH) {
@@ -102,7 +107,7 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
 
   return (
     <div className="card try" id="try">
-      <span className="k"><span className="live" />Tempo testnet, test money only</span>
+      <span className="k"><span className="live" />Demo match pool, test money only</span>
       <h2 style={{ marginTop: 8 }}>See a match happen</h2>
       <p className="try-sub">
         Give test money to {RECIPIENT_LABEL} and watch the pool match it. No login, no wallet. About a minute.
@@ -111,7 +116,7 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
       {phase === "idle" && (
         <div className="ctas">
           <button type="button" className="btn btn-primary" onClick={start}>
-            Try it
+            Try it with test money
             <span className="arr"><Icon name="arrow" /></span>
           </button>
         </div>
@@ -152,6 +157,8 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
 
       {phase === "done" && result && <Result r={result} onAgain={() => { setResult(null); setGiveStep(null); setPhase("ready"); }} />}
 
+      {address && phase !== "funding" && <CardFund address={address} />}
+
       {phase === "error" && (
         <div className="try-error" role="alert">
           <p>{error}</p>
@@ -160,6 +167,89 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
               Try again
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Card step of the demo route: Stripe sells USDC on Tempo into this test wallet, locked to it.
+ * Stripe cannot call the pool, so the gift still goes from the wallet. Sandbox only: no real
+ * tokens arrive, and the faucet still supplies the test money for the gift.
+ */
+function CardFund({ address }: { address: Address }) {
+  const [open, setOpen] = useState(false);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [redirect, setRedirect] = useState<string | null>(null);
+  const [fallback, setFallback] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const onUpdate = useCallback((s: OnrampSessionResult) => {
+    if (s.status === "fulfillment_complete") setDone(true);
+  }, []);
+  const onFail = useCallback(() => setFallback(true), []);
+
+  if (!PK) return null;
+
+  async function begin() {
+    if (open) return setOpen(false);
+    setOpen(true);
+    if (secret || busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch("/api/onramp/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ network: "tempo", address, amountUsd: CARD_USD }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.clientSecret) throw new Error(j.error || "Could not start a card payment");
+      setSecret(j.clientSecret);
+      setRedirect(j.redirectUrl ?? null);
+      if (window.innerWidth < NARROW && j.redirectUrl) {
+        setFallback(true);
+        window.open(j.redirectUrl, "_blank", "noopener");
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not start a card payment");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="try-card">
+      <p className="try-note">
+        The demo shows the whole route, from card to USDC on Tempo to a matched gift, with the card step in Stripe&rsquo;s sandbox.
+      </p>
+      <div className="try-card-row">
+        <button type="button" className="btn btn-ghost" onClick={begin} aria-expanded={open}>
+          Fund this test wallet by card
+        </button>
+        {TEST_MODE && <span className="chip try-test">Test mode</span>}
+      </div>
+      <p className="try-note">Sandbox: the card step is a demo. Test money for the donation still comes from the faucet.</p>
+      {open && (
+        <div className="try-card-pay" role="region" aria-label="Fund this test wallet by card">
+          {busy && <p className="try-note">Loading…</p>}
+          {err && <p className="try-card-err">{err}</p>}
+          {done && <p>Card step done.</p>}
+          {secret && !fallback && !done && (
+            <CryptoElements stripeOnramp={getOnramp()}>
+              <OnrampElement clientSecret={secret} onUpdate={onUpdate} onFail={onFail} className="try-onramp" />
+            </CryptoElements>
+          )}
+          {secret && fallback && !done &&
+            (redirect ? (
+              <a className="btn btn-primary" href={redirect} target="_blank" rel="noreferrer">
+                Open card payment in a new tab
+              </a>
+            ) : (
+              <p className="try-card-err">Card payments could not load here. Try again on a computer.</p>
+            ))}
         </div>
       )}
     </div>
@@ -178,7 +268,7 @@ function Result({ r, onAgain }: { r: GiveResult; onAgain: () => void }) {
         </p>
       ) : (
         <p>
-          You gave <b>{gave}</b>, and it went to {RECIPIENT_LABEL}. This match is used up for this wallet.
+          You gave <b>{gave}</b>, and it went to {RECIPIENT_LABEL}. Your $20 match was already used.
         </p>
       )}
       <p className="try-proof">

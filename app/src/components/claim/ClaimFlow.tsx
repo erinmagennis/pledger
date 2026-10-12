@@ -23,6 +23,14 @@ function fmtDate(iso?: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+/** Plain words for wallet connection errors (wagmi's own messages are technical). */
+function connectError(e: Error): string {
+  const m = `${e.name} ${e.message}`;
+  if (/ProviderNotFound|provider not found|not installed|no provider/i.test(m)) return "That wallet is not installed in this browser";
+  if (/UserRejected|reject|denied|cancel|closed/i.test(m)) return "You closed the wallet window";
+  return "Could not connect. Try another wallet";
+}
+
 function rowChip(r: ReviewRow) {
   if (!r.ok) return <span className="chip cl-no">Not counted</span>;
   if (r.kind === "sold") return <span className="chip cl-no">Sale email</span>;
@@ -130,8 +138,6 @@ export function ClaimFlow() {
           {done.claimed} receipt{done.claimed === 1 ? "" : "s"}, {formatCents(done.totalCents)} in fees. Payments go to{" "}
           {address ? shortAddress(address) : "your wallet"} in USDC on Base.
         </p>
-        <div className="mini">
-        </div>
         <div className="ctas" style={{ marginTop: 22 }}>
           <Link className="btn btn-primary" href="/claim/line">
             See the line<span className="arr"><Icon name="arrow" /></span>
@@ -168,7 +174,8 @@ export function ClaimFlow() {
             ))}
           </div>
         )}
-        {connect.error && <p className="cl-error">{connect.error.message.split("\n")[0]}</p>}
+        {!isConnected && <p className="cl-soft">No wallet? Coinbase Wallet makes one in a minute.</p>}
+        {connect.error && <p className="cl-error">{connectError(connect.error)}</p>}
       </div>
 
       <div className="card cl-step">

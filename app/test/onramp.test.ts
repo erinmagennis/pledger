@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOnrampParams, clientIp, friendlyStripeError, fulfilledTransfer, signStripePayload, UNSUPPORTED_MSG, verifyStripeSignature } from "@/lib/onramp";
+import { buildOnrampParams, clientIp, friendlyStripeError, fulfilledTransfer, parseTempoBody, signStripePayload, TEMPO_UNSUPPORTED_MSG, UNSUPPORTED_MSG, verifyStripeSignature, WALLET_KEYS } from "@/lib/onramp";
 
 const SECRET = "whsec_test_secret";
 const NOW = 1_760_000_000;
@@ -75,6 +75,45 @@ describe("onramp session params", () => {
   });
 });
 
+describe("card to Tempo (demo pool route)", () => {
+  const ADDR = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
+
+  it("locks the wallet on Tempo, USDC only, with the amount set", () => {
+    const p = buildOnrampParams({ network: "tempo", address: ADDR, remainingCents: 2000, ip: "8.8.8.8" });
+    expect(p.get(`wallet_addresses[${WALLET_KEYS.tempo}]`)).toBe(ADDR);
+    expect(p.has("wallet_addresses[base_network]")).toBe(false);
+    expect(p.get("lock_wallet_address")).toBe("true");
+    expect(p.getAll("destination_networks[]")).toEqual(["tempo"]);
+    expect(p.get("destination_network")).toBe("tempo");
+    expect(p.getAll("destination_currencies[]")).toEqual(["usdc"]);
+    expect(p.get("destination_currency")).toBe("usdc");
+    expect(p.get("destination_amount")).toBe("20.00");
+    expect(p.get("customer_ip_address")).toBe("8.8.8.8");
+  });
+
+  it("keeps Base as the default network", () => {
+    expect(WALLET_KEYS.base).toBe("base_network");
+    expect(buildOnrampParams({ address: ADDR }).get("destination_network")).toBe("base");
+  });
+
+  it("parses the Tempo body: address required, amount 1 to 500, default 20", () => {
+    expect(parseTempoBody({ network: "tempo", address: ADDR })).toEqual({ address: ADDR, amountCents: 2000 });
+    expect(parseTempoBody({ network: "tempo", address: ADDR, amountUsd: 12.5 })).toEqual({ address: ADDR, amountCents: 1250 });
+    expect(parseTempoBody({ network: "tempo", address: ADDR, amountUsd: 1 })).toEqual({ address: ADDR, amountCents: 100 });
+    expect(parseTempoBody({ network: "tempo", address: ADDR, amountUsd: 500 })).toEqual({ address: ADDR, amountCents: 50000 });
+    expect(parseTempoBody({ network: "tempo", address: ADDR, amountUsd: 0.5 })).toHaveProperty("error");
+    expect(parseTempoBody({ network: "tempo", address: ADDR, amountUsd: 501 })).toHaveProperty("error");
+    expect(parseTempoBody({ network: "tempo", address: ADDR, amountUsd: "lots" })).toHaveProperty("error");
+    expect(parseTempoBody({ network: "tempo", address: "0x123" })).toHaveProperty("error");
+    expect(parseTempoBody({ network: "base", address: ADDR })).toHaveProperty("error");
+    expect(parseTempoBody(null)).toHaveProperty("error");
+  });
+
+  it("names Tempo in the region error", () => {
+    expect(friendlyStripeError({ error: { code: "crypto_onramp_unsupported_country" } }, "tempo")).toBe(TEMPO_UNSUPPORTED_MSG);
+  });
+});
+
 describe("fulfilled onramp event", () => {
   const TX = "0x" + "ab".repeat(32);
   const ADDR = "0xAbCdEfabcdefabcdefabcdefabcdefabcdefABCD";
@@ -94,6 +133,7 @@ describe("fulfilled onramp event", () => {
   it("ignores other statuses, networks, events and missing tx", () => {
     expect(fulfilledTransfer(ev("fulfillment_processing"))).toBeNull();
     expect(fulfilledTransfer(ev("fulfillment_complete", { destination_network: "ethereum" }))).toBeNull();
+    expect(fulfilledTransfer(ev("fulfillment_complete", { destination_network: "tempo" }))).toBeNull();
     expect(fulfilledTransfer(ev("fulfillment_complete", { transaction_id: null }))).toBeNull();
     expect(fulfilledTransfer({ ...ev("fulfillment_complete"), type: "payment_intent.succeeded" })).toBeNull();
   });

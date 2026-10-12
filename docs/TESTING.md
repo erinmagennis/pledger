@@ -45,7 +45,7 @@ Two fingerprint bugs found and fixed while testing:
 
 | Date | Check | Result |
 |---|---|---|
-| 2026-10-11 | Spike on Tempo Moderato: sponsor deposit, matched donation with memo, refund | Both transactions succeeded (see README) |
+| 2026-10-11 | Spike on Tempo Moderato: sponsor deposit, matched donation with memo, refund | Both transactions succeeded (scripts in `spike/tempo/`) |
 | 2026-10-12 | MatchPool v1 deployed: `0x02b1364d6d6a4a2a73665591d2083d25e7396a5f` (1:1 match, $20 cap per donor, locked until 31 Dec 2026). $500 test match deposited | Deploy `0xe9836e53bb5b58a59c756edd34676dd2586302f4b8ca02b0ec67615d63636d2f`, deposit `0x650e4358da4971b5ae8555cf279cb44c653d69671b607513574073ef2d245564`, both succeeded |
 
 ## Live site (pledger.impacthook.org)
@@ -54,10 +54,15 @@ Two fingerprint bugs found and fixed while testing:
 |---|---|---|
 | 2026-10-12 | Every page and the pool data route respond on the live site | 200 on /, both pledge pages, /claim, /terms, /api/pools/test-match-pool |
 | 2026-10-12 | Live test-money route funds a fresh test wallet | Funded, faucet transactions returned |
-| 2026-10-12 | "Try it" end to end in a browser: test money, fee-free donation, match, result card, activity log | Matched gifts and a "match used up" case, all confirmed on Tempo testnet |
+| 2026-10-12 | "Try it" end to end in a browser: test money, fee-free donation, match, result card, activity log | Matched gifts and a "this visitor's $20 match was already used" case, all confirmed on Tempo testnet |
 | 2026-10-12 | Live receipt check with the database connected: a real buyer receipt plus its "You sold" email | Signatures valid; the pledge owner's receipt is correctly excluded from the line |
-
 | 2026-10-12 | Crawled every internal link on the home, Artizen, line and make pages | All return 200 |
-| 2026-10-12 | Help by amount: allocation tests (exact fill, partial last person, more than owed, skip paid, same wallet merged, next N people) | 10 passed; live route answers with the real (empty) line |
+| 2026-10-12 | Help by amount: allocation tests (whole people only, leftover shown with the amount the next person needs, next N people includes every entry of a selected person, skips paid entries) | Passed; live route answers with the real (empty) line |
 
-Not yet exercised end to end on the live site: a full claim submission signed by a wallet (needs a receipt from someone other than the pledge owner), a real Base payment check, public records (needs the records wallet), and card payments (needs Stripe approval).
+## Payment rule (app)
+
+| Date | Rule | Where |
+|---|---|---|
+| 2026-10-12 | Exact amount: a payment counts for a person only if it is their full remaining 10%, give or take 0.5%, sent after they joined the line, from someone other than themselves. Anything else is rejected with the reason ("Sent before this claim was made", "A wallet cannot pay itself", "Does not match what is owed"). Help by amount pays whole people only and shows what is left over. | `app/src/lib/`, app tests in `app/test/` (`cd app && npx vitest run`) |
+
+Not yet exercised end to end on the live site: a full claim submission signed by a wallet (needs a receipt from someone other than the pledge owner), a real Base payment check, the wallet batch send (EIP-5792), public records (needs the records wallet), and a card payment (Stripe sandbox purchase not run yet).

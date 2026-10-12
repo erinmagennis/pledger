@@ -41,21 +41,46 @@ export type ReceiptLike = {
 
 /**
  * Sum native USDC Transfer logs to `to` in a receipt. Multiple matching logs (batch payouts) are added.
- * Returns 0n for a reverted tx.
+ * Logs sent from `to` itself are counted apart in selfUnits and never as a payment.
+ * Returns zeros for a reverted tx.
  */
-export function sumUsdcTransfersTo(receipt: ReceiptLike, to: string): bigint {
-  if (receipt.status !== "success") return 0n;
+export function usdcTransfersTo(receipt: ReceiptLike, to: string): { units: bigint; selfUnits: bigint } {
+  if (receipt.status !== "success") return { units: 0n, selfUnits: 0n };
   const want = to.toLowerCase().replace(/^0x/, "").padStart(64, "0");
-  let total = 0n;
+  let units = 0n;
+  let selfUnits = 0n;
   for (const log of receipt.logs) {
     if (log.address.toLowerCase() !== BASE_USDC.toLowerCase()) continue;
     const t = log.topics;
     if (t.length !== 3 || t[0]?.toLowerCase() !== TRANSFER_TOPIC) continue;
     if (t[2]!.toLowerCase().replace(/^0x/, "") !== want) continue;
     if (!/^0x[0-9a-fA-F]{1,64}$/.test(log.data)) continue;
-    total += BigInt(log.data);
+    if (t[1]!.toLowerCase().replace(/^0x/, "") === want) selfUnits += BigInt(log.data);
+    else units += BigInt(log.data);
   }
-  return total;
+  return { units, selfUnits };
+}
+
+/** USDC paid to `to` by anyone other than `to`. */
+export function sumUsdcTransfersTo(receipt: ReceiptLike, to: string): bigint {
+  return usdcTransfersTo(receipt, to).units;
+}
+
+/** ISO time to ms. Postgres gives microseconds, so keep only the first 3 fraction digits. */
+const toMs = (iso: string) => Date.parse(iso.replace(/(\.\d{3})\d+/, "$1"));
+
+/** "$12.50" with cents always shown. */
+const dollars = (units: bigint) => "$" + (Number(units / 10_000n) / 100).toFixed(2);
+
+/**
+ * The payment rule: a payment counts only if it was sent after the person's first claim
+ * and is their full remaining amount, give or take 0.5%. (Self-transfers are dropped before this.)
+ */
+export function checkPaymentRule(args: { blockTime: string; firstClaimAt: string; amountUnits: bigint; owedUnits: bigint }): { ok: true } | { ok: false; error: string } {
+  if (!(toMs(args.blockTime) > toMs(args.firstClaimAt))) return { ok: false, error: "Sent before this claim was made" };
+  const { amountUnits: a, owedUnits: o } = args;
+  if (o <= 0n || a * 1000n < o * 995n || a * 1000n > o * 1005n) return { ok: false, error: `Does not match what is owed (${dollars(o > 0n ? o : 0n)})` };
+  return { ok: true };
 }
 
 /** Accept a bare hash or a Basescan-style link. */
@@ -74,8 +99,8 @@ export async function checkUsdcPayment(txHash: Hex, to: string, c: PublicClient 
     return { ok: false, reason: "tx-not-found" };
   }
   if (receipt.status !== "success") return { ok: false, reason: "tx-failed" };
-  const amountUnits = sumUsdcTransfersTo(receipt as unknown as ReceiptLike, to);
-  if (amountUnits === 0n) return { ok: false, reason: "no-usdc-transfer" };
+  const { units: amountUnits, selfUnits } = usdcTransfersTo(receipt as unknown as ReceiptLike, to);
+  if (amountUnits === 0n) return { ok: false, reason: selfUnits > 0n ? "self-transfer" : "no-usdc-transfer" };
   const block = await c.getBlock({ blockNumber: receipt.blockNumber });
   return {
     ok: true,

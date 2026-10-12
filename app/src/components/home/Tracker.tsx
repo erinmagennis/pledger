@@ -9,11 +9,18 @@ const AV_BG = ["var(--peach-soft)", "var(--sage-soft)", "var(--butter-soft)"];
 /** renderedAt = unix seconds of the server render, for relative times. */
 export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: number }) {
   const more = totals.peopleCount - totals.people.length;
+  // Lead with the demo total while real payouts are still $0; the real number stays one line below.
+  const demoLead = totals.testnetCents > 0;
   return (
     <div className="card tracker">
       <span className="k"><span className="live" />Paid out through Pledger</span>
-      <div className="big">{formatCents(totals.paidCents)}</div>
-      {totals.testnetCents > 0 && <p className="testnet-line">plus {formatCents(totals.testnetCents)} sent on testnet in the demo</p>}
+      <div className="big">{formatCents(demoLead ? totals.testnetCents : totals.paidCents)}</div>
+      {demoLead && (
+        <p className="testnet-line">
+          <span className="chip demo">Demo · test money</span>
+          {formatCents(totals.paidCents)} real so far
+        </p>
+      )}
       {totals.peopleCount > 0 && (
         <div className="ppl">
           <span className="stack">
@@ -39,7 +46,7 @@ export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: nu
                 <span className="tx">
                   <b>{f.text}</b>
                   <small>
-                    {f.testnet && <span className="tag">on testnet</span>}
+                    {f.testnet && <span className="tag">test money</span>}
                     <TimeAgo unix={f.time} renderedAt={renderedAt} />
                   </small>
                 </span>

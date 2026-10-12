@@ -4,7 +4,7 @@ A supporter pays someone in the line by card. Stripe sells USDC on Base and send
 
 ## How it works
 
-1. `POST /api/onramp/session` with `{ payeeId, group? }`. The server looks up the full payout address, works out what is still owed and mints a Stripe onramp session with the wallet locked:
+1. `POST /api/onramp/session` with `{ payeeId }`. The server looks up the full payout address, works out everything this person is still owed across all their places (any `group` is ignored, because the payment rule checks a transfer against the full remaining) and mints a Stripe onramp session with the wallet locked:
    - `wallet_addresses[base_network]=<address>` (Stripe names the Base wallet field `base_network`, see the CryptoOnrampSession object reference)
    - `lock_wallet_address=true`
    - `destination_networks[]=base`, `destination_network=base`
@@ -12,10 +12,31 @@ A supporter pays someone in the line by card. Stripe sells USDC on Base and send
    - `destination_amount=<remaining in USD>` when known
    - `customer_ip_address` from `x-forwarded-for`
    It returns `{ clientSecret, redirectUrl }` only.
-2. The Pay panel shows "Pay by card". It mounts Stripe's embedded onramp. On screens under 600px wide, or if the widget fails to load, it opens `redirectUrl` (a `crypto.link.com?session_hash=...` page hosted by Stripe/Link) in a new tab instead.
+2. The Pay panel shows "Pay by card", with the line "Keep the amount as shown. A different amount cannot be matched to this person." It mounts Stripe's embedded onramp. On screens under 600px wide, or if the widget fails to load, it opens `redirectUrl` (a `crypto.link.com?session_hash=...` page hosted by Stripe/Link) in a new tab instead.
 3. Stripe calls `POST /api/onramp/webhook` with `crypto.onramp_session.updated`. On `fulfillment_complete` the route reads `transaction_details.transaction_id` (the Base tx hash), checks it on Base and records it the same way as a pasted payment. Repeat deliveries are ignored.
 
 USDC on Base is supported for US customers (not EU). Others see "Card payments to Base are available in the US for now."
+
+## Card to Tempo (demo)
+
+The demo match pool page shows the whole route: card, then USDC on Tempo, then a matched donation. Stripe cannot call a contract; it only delivers tokens to a wallet. So the card buys USDC into the visitor's throwaway test wallet, and the existing "Try it" flow (or a connected wallet) then calls `donate` on the MatchPool from that wallet.
+
+1. "Try it" makes the test wallet. Once it exists, the card shows "Fund this test wallet by card" (hidden without `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, "Test mode" chip on `pk_test_...`).
+2. `POST /api/onramp/session` with `{ network: "tempo", address, amountUsd? }`. The address must be a valid EVM address; the amount is $1 to $500 and defaults to $20 (the page sends $20). No database lookup. Params:
+   - `wallet_addresses[tempo]=<address>` (see the key note below)
+   - `lock_wallet_address=true`
+   - `destination_networks[]=tempo`, `destination_network=tempo`
+   - `destination_currencies[]=usdc`, `destination_currency=usdc`
+   - `destination_amount=<amountUsd>`
+   - `customer_ip_address` from `x-forwarded-for`
+   It returns `{ clientSecret, redirectUrl }`, like the Base route. The embedded widget, the narrow-screen redirect and the widget-failure fallback are the same component as "Pay by card" (`src/components/pay/StripeOnramp.tsx`).
+3. On `fulfillment_complete` the card shows "Card step done." The webhook ignores Tempo deliveries (`fulfilledTransfer` is Base only), so nothing is recorded as an Artizen payment.
+
+**Wallet key: unverified.** Stripe's API lists `tempo` in the `destination_network(s)` enum, but the CryptoOnrampSession reference does not name the Tempo field in `wallet_addresses` yet. The code guesses `tempo`. If session creation fails with an invalid `wallet_addresses` parameter, change `WALLET_KEYS.tempo` in `app/src/lib/onramp.ts` to `tempo_network` (the Base pattern) and update the Tempo test in `app/test/onramp.test.ts`. One sandbox session is enough to confirm which key Stripe accepts.
+
+**What sandbox does:** mints a real sandbox session locked to the test wallet on Tempo, runs Stripe's card and identity screens with the test values below, and reports `fulfillment_complete`.
+
+**What sandbox does not do:** no real USDC arrives in the test wallet, and the pool runs on Tempo testnet with its own test token, not USDC. The test money for the donation still comes from the faucet (`/api/demo/fund`). The page says so: "Sandbox: the card step is a demo. Test money for the donation still comes from the faucet."
 
 ## Env vars
 

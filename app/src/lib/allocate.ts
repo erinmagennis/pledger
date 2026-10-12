@@ -26,15 +26,34 @@ export type Transfer = {
 export type Allocation = {
   transfers: Transfer[];
   totalUnits: bigint;
-  /** Amount mode only: what was asked for but is not owed to anyone. */
+  /** Amount mode only: what was asked for but not sent (too little for the next person, or no one left). */
   leftoverUnits: bigint;
+  /** Amount mode only: what the next person who did not fit is owed, or 0n when no one is left. */
+  nextUnits: bigint;
 };
 
-const EMPTY: Allocation = { transfers: [], totalUnits: 0n, leftoverUnits: 0n };
+const EMPTY: Allocation = { transfers: [], totalUnits: 0n, leftoverUnits: 0n, nextUnits: 0n };
+
+/** Open entries grouped by person (payout address), in order of each person's first place. */
+function byPerson(open: AllocEntry[]): { entries: AllocEntry[]; owed: bigint }[] {
+  const people = new Map<string, { entries: AllocEntry[]; owed: bigint }>();
+  for (const e of open) {
+    const a = e.address.toLowerCase();
+    let p = people.get(a);
+    if (!p) {
+      p = { entries: [], owed: 0n };
+      people.set(a, p);
+    }
+    p.entries.push(e);
+    p.owed += e.remainingUnits;
+  }
+  return [...people.values()];
+}
 
 /**
- * Fill the line in order, skipping anyone already paid.
- * amount: the last entry may be partial; anything above the total owed comes back as leftoverUnits.
+ * Fill the line in order, skipping anyone already paid. A payment only counts when it is a person's
+ * full remaining amount, so both modes pay whole people: every open entry of each person picked.
+ * amount: whole people in line order until the next one does not fit; the rest comes back as leftoverUnits.
  * nextN: the next N people (distinct payout addresses), each for their full remaining amount.
  * Entries for the same payout address are merged into one transfer.
  */
@@ -45,13 +64,16 @@ export function allocate(entries: AllocEntry[], mode: AllocMode): Allocation {
   if (mode.kind === "amount") {
     if (mode.amountUnits <= 0n) return EMPTY;
     let left = mode.amountUnits;
-    for (const e of open) {
-      if (left === 0n) break;
-      const units = e.remainingUnits < left ? e.remainingUnits : left;
-      picks.push({ e, units });
-      left -= units;
+    let nextUnits = 0n;
+    for (const p of byPerson(open)) {
+      if (p.owed > left) {
+        nextUnits = p.owed;
+        break;
+      }
+      for (const e of p.entries) picks.push({ e, units: e.remainingUnits });
+      left -= p.owed;
     }
-    return merge(picks, left);
+    return { ...merge(picks, left), nextUnits };
   }
 
   const n = Math.floor(mode.n);
@@ -60,7 +82,8 @@ export function allocate(entries: AllocEntry[], mode: AllocMode): Allocation {
   for (const e of open) {
     const a = e.address.toLowerCase();
     if (!people.has(a)) {
-      if (people.size === n) break;
+      // Keep going: a person already picked can have a later entry further down.
+      if (people.size === n) continue;
       people.add(a);
     }
     picks.push({ e, units: e.remainingUnits });
@@ -83,5 +106,5 @@ function merge(picks: { e: AllocEntry; units: bigint }[], leftoverUnits: bigint)
     t.amountUnits += units;
     totalUnits += units;
   }
-  return { transfers: [...byAddr.values()], totalUnits, leftoverUnits };
+  return { transfers: [...byAddr.values()], totalUnits, leftoverUnits, nextUnits: 0n };
 }

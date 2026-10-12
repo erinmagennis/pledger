@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { LineEntry, PaymentRecord } from "@/lib/claims";
+import { paidFromLine, shortAddress, type LineEntry, type PaymentRecord } from "@/lib/claims";
 import { avatarInitials, computeTotals, getPledge, lineStats, withLiveLine, type PoolTotals } from "@/lib/pledges";
 
-const entry = (pid: string, label: string, feeCents: number, paidCents: number, firstAt: string): LineEntry => ({
+const entry = (pid: string, label: string, feeCents: number, paidCents: number, firstAt: string, shortAddress = "0x…"): LineEntry => ({
   pid,
   place: 1,
   group: 2,
@@ -11,7 +11,7 @@ const entry = (pid: string, label: string, feeCents: number, paidCents: number, 
   feeCents,
   paidCents,
   status: "waiting",
-  shortAddress: "0x…",
+  shortAddress,
   firstAt,
 });
 
@@ -31,7 +31,8 @@ describe("home tracker totals", () => {
         { kind: "donated", time: 1760140800, amountUnits: "10000000", matchUnits: "10000000" },
       ],
     };
-    const t = computeTotals(pool, [], pays);
+    // The headline comes from the line (capped at each fee), so the line carries the paid $2.50.
+    const t = computeTotals(pool, [entry("a", "x", 250, 250, "1", "0xa")], pays);
     expect(t.paidCents).toBe(250);
     expect(t.testnetCents).toBe(2000);
     expect(t.byKind.map((k) => k.kind)).toEqual(["matching", "give-back"]);
@@ -43,7 +44,7 @@ describe("home tracker totals", () => {
   it("hides zero segments and stays flat with one day of data", () => {
     const pool: PoolTotals = { donatedUnits: "5000000", matchedUnits: "5000000", events: [{ kind: "donated", time: 1760140800, amountUnits: "5000000", matchUnits: "5000000" }] };
     const t = computeTotals(pool, [], []);
-    expect(t.byKind).toEqual([{ kind: "matching", label: "Matching (testnet)", cents: 1000 }]);
+    expect(t.byKind).toEqual([{ kind: "matching", label: "Demo match pool (test money)", cents: 1000 }]);
     expect(t.flat).toBe(true);
   });
 
@@ -59,7 +60,7 @@ describe("home tracker totals", () => {
     };
     const pays: PaymentRecord[] = [{ tx_hash: "0xp1", to_address: "0xabcdef0000000000000000000000000000001234", amount_units: "2500000", block_time: new Date(200_000).toISOString() }];
     const t = computeTotals(pool, [], pays);
-    expect(t.feed.map((f) => f.text)).toEqual(["Visitor 0xcb8b…8D7F gave $5", "Give-back of $2.50 paid to 0xabcd…1234", "Visitor 0x1111…2222 gave $10"]);
+    expect(t.feed.map((f) => f.text)).toEqual(["A visitor gave $5", "Give-back of $2.50 paid", "A visitor gave $10"]);
     expect(t.feed[0]).toMatchObject({ av: "CB", testnet: true, href: "https://explore.testnet.tempo.xyz/tx/0xd3" });
     expect(t.feed[1]).toMatchObject({ av: null, testnet: false, href: "https://basescan.org/tx/0xp1" });
     expect(computeTotals(null, [], []).feed).toEqual([]);
@@ -70,6 +71,36 @@ describe("home tracker totals", () => {
     const t = computeTotals(null, line, []);
     expect(t.people).toEqual(["TP", "AO"]);
     expect(t.peopleCount).toBe(2);
+  });
+});
+
+describe("paid totals, one capped number", () => {
+  it("home and pledge page agree, each entry capped at its fee", () => {
+    // An old overpay: $50 paid on a $10 fee counts as $10 on both pages.
+    const line = [entry("a", "x", 1000, 5000, "1"), entry("b", "y", 700, 300, "2")];
+    expect(paidFromLine(line)).toBe(1300);
+    expect(lineStats(line).paidCents).toBe(1300);
+    const pays: PaymentRecord[] = [{ tx_hash: "0x1", to_address: "0xa", amount_units: "50000000", block_time: "2026-10-12T10:00:00Z" }];
+    expect(computeTotals(null, line, pays).paidCents).toBe(1300);
+  });
+});
+
+describe("chart is capped like the headline", () => {
+  it("never ends above the headline: overpay capped at the fee, 99.5% counted as the full fee", () => {
+    const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const line = [
+      { ...entry("a", "x", 1000, 1000, "1", shortAddress(A)), status: "paid" as const },
+      { ...entry("b", "y", 1000, 1000, "2", shortAddress(B)), status: "paid" as const },
+    ];
+    const pays: PaymentRecord[] = [
+      { tx_hash: "0x1", to_address: A, amount_units: "30000000", block_time: "2026-10-10T10:00:00Z" }, // $30 on a $10 fee
+      { tx_hash: "0x2", to_address: B, amount_units: "9950000", block_time: "2026-10-11T10:00:00Z" }, // $9.95 forgiven to $10
+      { tx_hash: "0x3", to_address: "0xcccccccccccccccccccccccccccccccccccccccc", amount_units: "5000000", block_time: "2026-10-12T10:00:00Z" }, // not in line
+    ];
+    const t = computeTotals(null, line, pays);
+    expect(t.paidCents).toBe(2000);
+    expect(t.series).toEqual([1000, 2000, 2000]);
   });
 });
 

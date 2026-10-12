@@ -1,4 +1,5 @@
 // Server-only Supabase client (service role). Never import from client components.
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let cached: SupabaseClient | null | undefined;

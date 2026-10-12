@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = { title: "Terms · Pledger" };
 
-const CONTACT = "CONTACT_EMAIL"; // TODO(Erin): contact email
+const CONTACT = "https://t.me/erinmagennis";
 
-const sections: { h: string; p: string[] }[] = [
+const sections: { h: string; p: ReactNode[] }[] = [
   {
     h: "Who we are",
     p: [
@@ -57,8 +58,8 @@ const sections: { h: string; p: string[] }[] = [
   {
     h: "Changes and law",
     p: [
-      "We may update these terms and will change the date below when we do. Wisconsin law governs these terms.",
-      `Questions: ${CONTACT}.`,
+      "We may update these terms and will change the date at the top when we do. Wisconsin law governs these terms.",
+      <>Questions: message us on <a href={CONTACT} target="_blank" rel="noreferrer">Telegram</a>.</>,
     ],
   },
 ];

@@ -74,6 +74,8 @@ export type LineEntry = {
 
 const SIGNATURE_REASONS = /^(dkim-|no-artizen-signature|unsigned-header|bad-from|from-not-artizen|duplicate-header)/;
 
+export const NO_FEE = "This receipt has no endowment fee";
+
 /** Map verifier reasons to short, plain messages. */
 export function friendlyReason(reason?: string): { message: string; showHelp?: boolean } {
   if (!reason) return { message: "" };
@@ -89,6 +91,8 @@ export function friendlyReason(reason?: string): { message: string; showHelp?: b
       return { message: "This receipt belongs to the pledge owner" };
     case "not-a-receipt":
       return { message: "Not an Artizen receipt" };
+    case "no-fee":
+      return { message: NO_FEE };
     case "too-large":
     case "not-rfc822":
     case "not-a-buffer":
@@ -178,6 +182,22 @@ export function displayLabel(mode: DisplayMode, name: string): string | null {
   return mode === "full" ? clean : initialsOf(clean);
 }
 
+/** A hostname-like token: letters, digits or hyphens, a dot with no space either side, then 2 to 4 letters ending the token.
+ * "pledger.com" fails; "O. Neal" and "St. Ann" pass because a space follows the dot. */
+const HOSTNAME = /(?:^|\s)[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,4}(?=\s|$)/u;
+
+/**
+ * Why a public name cannot be used, or null when it is fine. Letters (any script), digits, spaces
+ * and . ' - only, up to 60 characters, and nothing that looks like a wallet, link or email.
+ */
+export function nameProblem(name: string): string | null {
+  const clean = name.replace(/\s+/g, " ").trim();
+  if (clean.length > 60) return "Keep the name to 60 characters or fewer";
+  if (!/^[\p{L}\p{M}\p{N} .'’-]*$/u.test(clean)) return "Use only letters, numbers, spaces and . ' -";
+  if (/\b0x|http|www|@/i.test(clean) || HOSTNAME.test(clean)) return "A name cannot include a link, email or wallet address";
+  return null;
+}
+
 export function isDisplayMode(v: unknown): v is DisplayMode {
   return v === "full" || v === "initials" || v === "project";
 }
@@ -261,6 +281,34 @@ export function shortAddress(a: string): string {
   return a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 
+/** A payment's amount_units as a bigint (Postgres numeric can come back as "123.0"). */
+export const paymentUnits = (u: string | number) => BigInt(String(u).split(".")[0] || "0");
+
+/**
+ * Fill one person's entries, in line order, from everything they have been paid, in USDC units.
+ * The payment rule accepts down to 99.5% of what is owed, so the shortfall is forgiven, never carried:
+ * when the person's total reaches 99.5% of all their fees, every entry is paid in full; otherwise an
+ * entry reaching 99.5% of its own fee is paid in full, and the first one below that takes all that is left.
+ */
+export function fillPerson(feesCents: number[], paidUnits: bigint): { paidCents: number; status: LineStatus }[] {
+  const ok = (paid: bigint, feeCents: number) => feeCents > 0 && paid > 0n && paid * 1000n >= centsToUnits(feeCents) * 995n;
+  if (ok(paidUnits, feesCents.reduce((s, f) => s + Math.max(0, f), 0))) {
+    return feesCents.map((f) => (f > 0 ? { paidCents: f, status: "paid" } : { paidCents: 0, status: "waiting" }));
+  }
+  let left = paidUnits;
+  return feesCents.map((f) => {
+    if (f <= 0 || left <= 0n) return { paidCents: 0, status: "waiting" };
+    const feeUnits = centsToUnits(f);
+    if (ok(left, f)) {
+      left = left > feeUnits ? left - feeUnits : 0n;
+      return { paidCents: f, status: "paid" };
+    }
+    const paidCents = unitsToCents(left);
+    left = 0n;
+    return { paidCents, status: paidCents > 0 ? "partial" : "waiting" };
+  });
+}
+
 /**
  * Build the public line.
  * Per person (payout address): group 1 = self-backed fee total, group 2 = other fees.
@@ -300,17 +348,22 @@ export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): Lin
     return x.address < y.address ? -1 : 1;
   });
 
-  const paidLeft = new Map<string, number>();
+  // Sum each person's payments in USDC units and convert to cents only per entry, so cents never get lost per payment.
+  const paidBy = new Map<string, bigint>();
   for (const pay of payments) {
     const a = pay.to_address.toLowerCase();
-    paidLeft.set(a, (paidLeft.get(a) ?? 0) + unitsToCents(BigInt(String(pay.amount_units).split(".")[0] || "0")));
+    paidBy.set(a, (paidBy.get(a) ?? 0n) + paymentUnits(pay.amount_units));
+  }
+
+  const byPerson = new Map<string, Acc[]>();
+  for (const a of sorted) byPerson.set(a.address, [...(byPerson.get(a.address) ?? []), a]);
+  const filled = new Map<Acc, { paidCents: number; status: LineStatus }>();
+  for (const [address, mine] of byPerson) {
+    fillPerson(mine.map((a) => a.feeCents), paidBy.get(address) ?? 0n).forEach((f, j) => filled.set(mine[j]!, f));
   }
 
   return sorted.map((a, i) => {
-    const left = paidLeft.get(a.address) ?? 0;
-    const paidCents = Math.min(left, a.feeCents);
-    paidLeft.set(a.address, left - paidCents);
-    const status: LineStatus = paidCents >= a.feeCents && a.feeCents > 0 ? "paid" : paidCents > 0 ? "partial" : "waiting";
+    const { paidCents, status } = filled.get(a)!;
     const projects = [...a.projects].sort();
     const label = latestLabel.get(a.address)?.label || projects.join(", ");
     return {
@@ -326,6 +379,11 @@ export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): Lin
       firstAt: a.firstAt,
     };
   });
+}
+
+/** Total paid back from the line, each entry capped at its fee. Home and pledge page both use this. */
+export function paidFromLine(line: Pick<LineEntry, "paidCents" | "feeCents">[]): number {
+  return line.reduce((s, e) => s + Math.max(0, Math.min(e.paidCents, e.feeCents)), 0);
 }
 
 export function statusText(e: Pick<LineEntry, "status" | "paidCents" | "feeCents">): string {
