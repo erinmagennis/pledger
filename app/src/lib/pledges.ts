@@ -2,7 +2,7 @@
 // test-match-pool from Tempo testnet (withLivePool), artizen-give-back from the
 // Supabase line (withLiveLine), and the home tracker from both (computeTotals).
 // Pure: no server imports, safe for client components and tests.
-import { fillPerson, formatCents, isExtra, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
+import { fillPerson, formatCents, formatCentsExact, isExtra, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
 
 // Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
 const TEMPO_EXPLORER = "https://explore.testnet.tempo.xyz";
@@ -86,6 +86,37 @@ function lineFields(st: LineStats): Pick<Pledge, "stats" | "cardStats" | "inPlac
       { label: "Chain", value: "Base" },
     ],
   };
+}
+
+// ---------- Artizen give-back: the rule + money in place ----------
+
+export type RuleRow = { label: string; value: string };
+
+/** The give-back rule, set once on 12 Oct 2026. Copy approved by Erin; do not edit after claims open. */
+export const ARTIZEN_RULE = {
+  rows: [
+    { label: "Who pledges", value: "Erin Magennis" },
+    { label: "What", value: "50% of any Colosseum prize" },
+    { label: "Who gets it", value: "Season 7 backers who paid the 10% endowment fee, in this line" },
+    { label: "Order", value: "Self-backers first, then smallest claims first" },
+    { label: "When", value: "Payouts start within 14 days of the prize arriving, then weekly until the pledge is used up" },
+    { label: "What counts as paid", value: "The full 10% fee, sent in USDC (a US dollar stablecoin) on Base, checked on chain" },
+    { label: "Record", value: "Every checked claim and every payment is recorded on Base" },
+  ] as RuleRow[],
+  setOn: "Set on 12 Oct 2026. Claims open the same day. The rule does not change after that.",
+  pledged: "50% of winnings (prize not yet decided)",
+  /** Nothing is locked until the prize arrives. */
+  inPlaceCents: 0,
+} as const;
+
+/** Right column of the rule card: what is pledged, what is in place, and the live line numbers. */
+export function moneyRows(st: LineStats, rule: Pick<typeof ARTIZEN_RULE, "pledged" | "inPlaceCents"> = ARTIZEN_RULE): RuleRow[] {
+  return [
+    { label: "Pledged", value: rule.pledged },
+    { label: "In place now", value: formatCentsExact(rule.inPlaceCents) },
+    { label: "Paid out so far", value: formatCentsExact(st.paidCents) },
+    { label: "People in line", value: String(st.people) },
+  ];
 }
 
 /** Merge the live line into the Artizen give-back pledge. */

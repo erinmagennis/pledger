@@ -296,3 +296,21 @@ section.gb-sec{padding-top:64px}
 .linecard .lc-top{align-items:center}
 
 .chip.demo{background:#eceae4;color:#4a4d49;margin-left:6px}
+
+/* artizen: the rule + money in place (RuleCard), top of the give-back page */
+section.gb-sec.gb-rule-sec{padding-top:32px}
+.gb-rule{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:40px}
+.gb-rule-col{display:flex;flex-direction:column;min-width:0}
+.gb-rule .mini{margin-top:14px}
+.gb-rule-rows .r{display:grid;grid-template-columns:9.5em minmax(0,1fr);gap:16px}
+.gb-rule-rows .r span:first-child{color:var(--soft);white-space:normal}
+.gb-rule-rows .r span:last-child{text-align:left}
+.gb-rule-set{font-size:13.5px;color:var(--faint);margin-top:12px}
+.gb-rule-p{font-size:15px;color:var(--soft);margin-top:18px;max-width:42ch}
+.gb-rule-cta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+.gb-rule-cta .chip.demo{margin-left:0}
+@media(max-width:900px){
+ section.gb-sec.gb-rule-sec{padding-top:24px}
+ .gb-rule{grid-template-columns:1fr;gap:32px;padding:24px 22px}
+ .gb-rule-rows .r{grid-template-columns:1fr;gap:2px}
+}

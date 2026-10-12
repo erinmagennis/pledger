@@ -1,6 +1,6 @@
 import { Button } from "../Button";
 import { Icon, type IconName } from "../Icons";
-import type { Pledge } from "@/lib/pledges";
+import { ARTIZEN_RULE, moneyRows, type LineStats, type Pledge } from "@/lib/pledges";
 
 export function InPlaceCard({ pledge }: { pledge: Pledge }) {
   return (
@@ -54,6 +54,47 @@ export function HowCard({ pledge }: { pledge: Pledge }) {
 /** Shared section head for the give-back page: same title style and left edge for every section. */
 export function SectionHead({ id, title }: { id: string; title: string }) {
   return <h2 id={id} className="gb-h">{title}</h2>;
+}
+
+/** The rule (set once) and the money in place (live), side by side. Artizen give-back page only. */
+export function RuleCard({ stats }: { stats: LineStats }) {
+  return (
+    <section className="gb-sec gb-rule-sec" aria-label="The rule and money in place">
+      <div className="card gb-rule">
+        <div className="gb-rule-col">
+          <span className="k">The rule</span>
+          <div className="mini gb-rule-rows">
+            {ARTIZEN_RULE.rows.map((r) => (
+              <div className="r" key={r.label}>
+                <span>{r.label}</span>
+                <span>{r.value}</span>
+              </div>
+            ))}
+          </div>
+          <p className="gb-rule-set">{ARTIZEN_RULE.setOn}</p>
+        </div>
+        <div className="gb-rule-col">
+          <span className="k"><span className="live" />Money in place</span>
+          <div className="mini">
+            {moneyRows(stats).map((r) => (
+              <div className="r" key={r.label}>
+                <span>{r.label}</span>
+                <span>{r.value}</span>
+              </div>
+            ))}
+          </div>
+          <p className="gb-rule-p">
+            Nothing is locked yet, because the prize has not been awarded. When a pledge is funded up front, it
+            looks like this:
+          </p>
+          <div className="gb-rule-cta">
+            <Button href="/pledges/test-match-pool" variant="ghost">See a locked pledge</Button>
+            <span className="chip demo">Demo · test money</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 /** Who's backing it: Erin's funder card with her note, and an open slot for anyone who wants to help. */
