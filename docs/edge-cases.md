@@ -57,7 +57,7 @@ Still to build tests for:
 - An attestation fails (out of gas, network error): the claim is still saved and the attestation retries. The page shows "record pending". RULE
 - No personal data on chain: only the fingerprint, fee, project, group and status. RULE
 
-## Test match pool ("Try it")
+## Demo match pool ("Try it", test money)
 
 - One person making many throwaway wallets: limited per visitor, a small match per wallet, and Pledger can top up the pool. RULE
 - Faucet or fee sponsor down: a clear message plus a backup pre-funded demo wallet. RULE

@@ -12,7 +12,7 @@ Built for Colosseum's Crypto World's Fair (Sep 14 to Oct 12, 2026). Started Oct 
 
 | | Where | What happens |
 |---|---|---|
-| Test match pool | [/pledges/test-match-pool](https://pledger.impacthook.org/pledges/test-match-pool) | Press **Try it**. The page makes a throwaway test wallet, fills it with free test money, and gives $5 to $20. The pool matches 1:1 up to $20 per wallet, in the same transaction, with no fee for the donor. The match is locked until 31 Dec 2026 and cannot be taken back before then. No login, no wallet extension. |
+| Demo match pool (test money) | [/pledges/test-match-pool](https://pledger.impacthook.org/pledges/test-match-pool) | Press **Try it**. The page makes a throwaway test wallet, fills it with free test money, and gives $5 to $20. The pool matches 1:1 up to $20 per wallet, in the same transaction, with no fee for the donor. The match is locked until 31 Dec 2026 and cannot be taken back before then. No login, no wallet extension. |
 | Artizen give-back (real) | [/pledges/artizen-give-back](https://pledger.impacthook.org/pledges/artizen-give-back) | People who paid Artizen's 10% endowment fee in Season 7 claim it back from half of the builder's Colosseum winnings. They drop in their original receipt emails, and Pledger checks Artizen's DKIM signature on each one, so there are no screenshots and no manual review. Self-backers go first, smallest claims first. Anyone can pay people in line directly on Base, by amount or by the next people in line. |
 
 ## How it works
