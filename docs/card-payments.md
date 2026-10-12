@@ -19,6 +19,8 @@ USDC on Base is supported for US customers (not EU). Others see "Card payments t
 
 ## Card to Tempo (demo)
 
+**Status (12 Oct 2026): off.** Stripe's sandbox rejects USDC on Tempo (`crypto_onramp_invalid_destination_currency_and_network_pair`), so the card step is hidden (`TEMPO_CARD_ENABLED = false` in `TryIt.tsx`). The code below stays ready for when Stripe lists a stablecoin on Tempo.
+
 The demo match pool page shows the whole route: card, then USDC on Tempo, then a matched donation. Stripe cannot call a contract; it only delivers tokens to a wallet. So the card buys USDC into the visitor's throwaway test wallet, and the existing "Try it" flow (or a connected wallet) then calls `donate` on the MatchPool from that wallet.
 
 1. "Try it" makes the test wallet. Once it exists, the card shows "Fund this test wallet by card" (hidden without `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, "Test mode" chip on `pk_test_...`).

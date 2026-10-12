@@ -180,6 +180,9 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
  * tokens arrive, and the faucet still supplies the test money for the gift. The sandbox notes show only
  * with a pk_test key; the server turns a live key away for Tempo.
  */
+const TEMPO_CARD_ENABLED = false;
+
+
 function CardFund({ address }: { address: Address }) {
   const [open, setOpen] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
@@ -193,7 +196,8 @@ function CardFund({ address }: { address: Address }) {
   }, []);
   const onFail = useCallback(() => setFallback(true), []);
 
-  if (!PK) return null;
+  // Off until Stripe supports a stablecoin on Tempo: the sandbox rejects usdc+tempo (crypto_onramp_invalid_destination_currency_and_network_pair, 12 Oct 2026).
+  if (!PK || !TEMPO_CARD_ENABLED) return null;
 
   async function begin() {
     if (open) return setOpen(false);
