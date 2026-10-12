@@ -3,11 +3,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let cached: SupabaseClient | null | undefined;
 
-/** Returns null when SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set. */
+/** Returns null when SUPABASE_URL or the secret key is not set. Prefers the new sb_secret_ key (SUPABASE_SECRET_KEY); the legacy service_role JWT still works until Supabase retires it (end of 2026). */
 export function getSupabase(): SupabaseClient | null {
   if (cached !== undefined) return cached;
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (typeof window !== "undefined" || !url || !key) {
     cached = null;
     return cached;
