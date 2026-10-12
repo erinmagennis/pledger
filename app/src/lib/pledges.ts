@@ -3,7 +3,9 @@
 // Supabase line (withLiveLine), and the home tracker from both (computeTotals).
 // Pure: no server imports, safe for client components and tests.
 import { fillPerson, formatCents, isExtra, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
-import zcashJson from "../content/zcash-pledge.json";
+import zcashTestnetJson from "../content/zcash-pledge.testnet.json";
+import zcashMainnetJson from "../content/zcash-pledge.mainnet.json";
+import type { Net } from "./network";
 
 // Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
 const TEMPO_EXPLORER = "https://explore.testnet.tempo.xyz";
@@ -17,7 +19,7 @@ const POOL_ROWS: InPlaceRow[] = [
 ];
 
 export type PledgeKind = "matching" | "prize" | "give-back" | "private";
-export type Chain = "Tempo testnet" | "Base" | "Zcash testnet";
+export type Chain = "Tempo testnet" | "Base" | "Zcash testnet" | "Zcash mainnet";
 
 export type Stat = { value: string; label: string };
 export type ActivityEntry = { date: string; text: string; amount?: string; href?: string };
@@ -41,6 +43,8 @@ export type Pledge = {
   progress?: number;
   inPlace: InPlaceRow[];
   activity: ActivityEntry[];
+  /** Date of a one-time snapshot ("12 Oct 2026"). Set for snapshot pledges; the In place card shows it instead of a live dot. */
+  checkedOn?: string;
   howItWorks: string[];
   action: { label: string; href: string };
 };
@@ -129,46 +133,82 @@ export function withLiveLine(pledge: Pledge, st: LineStats): Pledge {
 }
 
 
-// ---------- Zcash testnet: private funder, public money ----------
+// ---------- Zcash: private funder, public money (testnet proof + mainnet pledge) ----------
 
 type ZcashTx = { txid: string; block: number; date: string; amountZat: number; feeZat: number };
 
-/** Facts from the Zcash testnet viewing-key spike (12 Oct 2026). The viewing key and address are public by design. */
+/** A static snapshot of one Zcash pledge wallet. The viewing key and address are public by design.
+ * Testnet: facts from the viewing-key spike (12 Oct 2026). Mainnet: placeholders (null) until the funder's
+ * wallet exists and `published` is true. Every string on the page is derived from this data. */
 export type ZcashPledgeData = {
-  network: "Zcash testnet";
-  unit: "TAZ";
-  address: string;
+  network: "Zcash testnet" | "Zcash mainnet";
+  networkId: Net;
+  unit: "TAZ" | "ZEC";
+  /** False until the wallet exists and the viewing key is published. Nothing numeric is shown before that. */
+  published: boolean;
+  /** Shielded pool the funds sit in (mainnet). */
+  pool?: string;
+  address: string | null;
   addressType: string;
-  viewingKey: string;
+  viewingKey: string | null;
   viewingKeyType: string;
-  birthdayHeight: number;
-  balanceZat: number;
-  pledgeTx: ZcashTx & { source: string };
-  outgoingTx: ZcashTx;
+  birthdayHeight: number | null;
+  balanceZat: number | null;
+  pledgeTx?: ZcashTx & { source?: string };
+  outgoingTx?: ZcashTx;
   explorerTxUrl: string;
   explorerShows: string;
-  verifiedAt: string;
-  verifiedBlock: number;
+  verifiedAt: string | null;
+  verifiedBlock: number | null;
   verifiedWith: string;
   indexer: string;
-  /** Contains the placeholder <UFVK>; use zcashVerifyCommand() for the full command. */
+  /** Contains the placeholders <UFVK> (and <BIRTHDAY> on mainnet); use zcashVerifyCommand() for the full command. */
   verifyCommand: string;
   spendCheck: string;
 };
 
-export const ZCASH_SLUG = "zcash-private-pledge";
-export const ZCASH: ZcashPledgeData = zcashJson as ZcashPledgeData;
+/** The testnet JSON predates networkId/published (kept byte-for-byte); fill them from the network name. */
+function zcashData(raw: object): ZcashPledgeData {
+  const r = raw as Omit<ZcashPledgeData, "networkId" | "published"> & Partial<Pick<ZcashPledgeData, "networkId" | "published">>;
+  return { ...r, networkId: r.networkId ?? (r.network === "Zcash mainnet" ? "mainnet" : "testnet"), published: r.published ?? true };
+}
 
-/** 12_390_000 zat to "0.1239 TAZ" (1 TAZ = 100,000,000 zat; trailing zeros dropped). */
-export function formatZat(zat: number, unit = ZCASH.unit): string {
+export const ZCASH_SLUG = "zcash-private-pledge";
+/** The testnet proof (home card and default page). */
+export const ZCASH: ZcashPledgeData = zcashData(zcashTestnetJson);
+export const ZCASH_MAINNET: ZcashPledgeData = zcashData(zcashMainnetJson);
+export const ZCASH_BY_NET: Record<Net, ZcashPledgeData> = { testnet: ZCASH, mainnet: ZCASH_MAINNET };
+
+/** 12_390_000 zat to "0.1239 TAZ" (1 TAZ or ZEC = 100,000,000 zat; trailing zeros dropped). */
+export function formatZat(zat: number, unit: string = ZCASH.unit): string {
   const whole = Math.floor(zat / 1e8);
   const frac = String(zat % 1e8).padStart(8, "0").replace(/0+$/, "");
   return `${whole.toLocaleString("en-US")}${frac ? "." + frac : ""} ${unit}`;
 }
 
-/** The verify command with the real viewing key in place. */
+/** The verify command with the real viewing key (and birthday) in place. */
 export function zcashVerifyCommand(d: ZcashPledgeData = ZCASH): string {
-  return d.verifyCommand.replace("<UFVK>", d.viewingKey);
+  return d.verifyCommand.replace("<UFVK>", d.viewingKey ?? "<UFVK>").replace("<BIRTHDAY>", d.birthdayHeight != null ? String(d.birthdayHeight) : "<BIRTHDAY>");
+}
+
+/** The command as shown on the page: key replaced by a short placeholder, birthday filled in. */
+export function zcashVerifyDisplay(d: ZcashPledgeData = ZCASH): string {
+  return d.verifyCommand.replace("<UFVK>", "<viewing key>").replace("<BIRTHDAY>", d.birthdayHeight != null ? String(d.birthdayHeight) : "<birthday>");
+}
+
+/** Risks shown on the mainnet pledge (real money). Approved by Erin, verbatim; block N filled from the snapshot. */
+export function zcashMainnetRisks(d: ZcashPledgeData): string[] {
+  const block = d.verifiedBlock != null ? d.verifiedBlock.toLocaleString("en-US") : "N";
+  return [
+    `This is real money (${d.unit}), not test money.`,
+    "The viewing key shows every payment in and out of this wallet, the amounts, the memos and the balance, forever. It cannot be taken back.",
+    "Memos are readable by anyone with the key. Do not put names or contact details in a memo.",
+    "A funder who pays from a transparent (t-) address is visible on the public chain without any key.",
+    "If funds went through an exchange, the exchange knows who sent them.",
+    "The key cannot spend. Only the wallet seed can, and the funder alone holds it.",
+    `No external audit. The balance is a snapshot as of block ${block}, not live.`,
+    `Funds sit in Zcash's ${d.pool ?? "Ironwood"} pool, live since 28 Jul 2026.`,
+  ];
 }
 
 /** "2026-10-12" to "12 Oct 2026". */
@@ -179,21 +219,73 @@ function isoDay(iso: string): string {
 const shortTx = (tx: string) => tx.slice(0, 6) + "…" + tx.slice(-4);
 
 export function zcashPledge(d: ZcashPledgeData = ZCASH): Pledge {
-  // First use on each surface names the unit in words, never a bare ticker. The balance is a one-time
-  // snapshot from the spike, not a live read, so its label says so.
-  const inPlace = `${formatZat(d.balanceZat)} (Zcash test money)`;
-  const checked = isoDay(d.verifiedAt);
-  return {
+  const test = d.networkId === "testnet";
+  const zat = (n: number) => formatZat(n, d.unit);
+  const base = {
     slug: ZCASH_SLUG,
-    kind: "private",
+    kind: "private" as const,
     title: "Public money, private funder",
-    testnet: true,
+    testnet: test,
     by: { name: "Kept private", initials: "?" },
     chain: d.network,
+    action: { label: "Verify it yourself", href: "#verify" },
+  };
+  const keyLines = [
+    "The pledge publishes a viewing key. With it, anyone can see what came in, what went out and what is left.",
+    "The key also shows payments going out, including where they went.",
+    "The key cannot spend. Only the funder's own wallet can move the money.",
+    "Who sent the money stays private. The public explorer shows the fee and nothing else.",
+  ];
+
+  // Not published yet (mainnet before the wallet exists): no numbers, no activity.
+  if (!d.published || d.balanceZat == null) {
+    return {
+      ...base,
+      stats: [
+        { value: "Coming", label: "in place" },
+        { value: "Private", label: "funder" },
+      ],
+      inPlace: [
+        { label: "Funder", value: "Private" },
+        ...(d.pool ? [{ label: "Pool", value: d.pool }] : []),
+        { label: "Chain", value: d.network },
+      ],
+      activity: [],
+      howItWorks: ["The funder sends money to a private Zcash address.", ...keyLines],
+    };
+  }
+
+  // First use on each surface names the unit in words, never a bare ticker. The balance is a one-time
+  // snapshot, not a live read, so its label says so.
+  const inPlace = `${zat(d.balanceZat)} (Zcash${test ? " test money" : ""})`;
+  const checked = d.verifiedAt ? isoDay(d.verifiedAt) : undefined;
+  const activity: ActivityEntry[] = [];
+  if (d.outgoingTx) {
+    activity.push({
+      date: isoDay(d.outgoingTx.date),
+      text: `${test ? "Test payment" : "Payment"} out, fee ${zat(d.outgoingTx.feeZat)}`,
+      amount: zat(d.outgoingTx.amountZat),
+      href: d.explorerTxUrl + d.outgoingTx.txid,
+    });
+  }
+  if (d.pledgeTx) {
+    activity.push({
+      date: isoDay(d.pledgeTx.date),
+      text: test ? "Pledge funded with free test money" : "Pledge funded",
+      amount: zat(d.pledgeTx.amountZat),
+      href: d.explorerTxUrl + d.pledgeTx.txid,
+    });
+  }
+  const holds = d.pledgeTx
+    ? ` This one holds ${zat(d.pledgeTx.amountZat)}${test ? " of free test money from a testnet faucet" : ""}.`
+    : "";
+  return {
+    ...base,
+    checkedOn: checked,
     stats: [
       { value: inPlace, label: "in place now (snapshot)" },
       { value: "Private", label: "funder" },
-      { value: shortDate(checked), label: "checked" },
+      ...(checked ? [{ value: shortDate(checked), label: "checked" }] : []),
     ],
     cardStats: [
       { value: inPlace, label: "in place now (snapshot)" },
@@ -202,32 +294,15 @@ export function zcashPledge(d: ZcashPledgeData = ZCASH): Pledge {
     inPlace: [
       { label: "In place now (snapshot)", value: inPlace, ok: true },
       { label: "Funder", value: "Private" },
-      { label: "Last verified", value: `Block ${d.verifiedBlock.toLocaleString("en-US")}, ${checked}` },
-      { label: "Pledge tx", value: shortTx(d.pledgeTx.txid), href: d.explorerTxUrl + d.pledgeTx.txid, note: "The explorer shows the fee only." },
+      ...(d.verifiedBlock != null && checked ? [{ label: "Last verified", value: `Block ${d.verifiedBlock.toLocaleString("en-US")}, ${checked}` }] : []),
+      ...(d.pledgeTx
+        ? [{ label: "Pledge tx", value: shortTx(d.pledgeTx.txid), href: d.explorerTxUrl + d.pledgeTx.txid, note: "The explorer shows the fee only." }]
+        : []),
+      ...(d.pool ? [{ label: "Pool", value: d.pool }] : []),
       { label: "Chain", value: d.network },
     ],
-    activity: [
-      {
-        date: isoDay(d.outgoingTx.date),
-        text: `Test payment out, fee ${formatZat(d.outgoingTx.feeZat)}`,
-        amount: formatZat(d.outgoingTx.amountZat),
-        href: d.explorerTxUrl + d.outgoingTx.txid,
-      },
-      {
-        date: isoDay(d.pledgeTx.date),
-        text: "Pledge funded with free test money",
-        amount: formatZat(d.pledgeTx.amountZat),
-        href: d.explorerTxUrl + d.pledgeTx.txid,
-      },
-    ],
-    howItWorks: [
-      `The funder sends money to a private Zcash address. This one holds ${formatZat(d.pledgeTx.amountZat)} of free test money from a testnet faucet.`,
-      "The pledge publishes a viewing key. With it, anyone can see what came in, what went out and what is left.",
-      "The key also shows payments going out, including where they went.",
-      "The key cannot spend. Only the funder's own wallet can move the money.",
-      "Who sent the money stays private. The public explorer shows the fee and nothing else.",
-    ],
-    action: { label: "Verify it yourself", href: "#verify" },
+    activity,
+    howItWorks: [`The funder sends money to a private Zcash address.${holds}`, ...keyLines],
   };
 }
 

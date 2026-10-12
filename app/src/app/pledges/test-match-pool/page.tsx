@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icons";
 import { LivePoolView } from "@/components/demo/LivePoolView";
+import { MainnetOnly } from "@/components/NetSwitch";
 import { getPledge } from "@/lib/pledges";
 import { readPool, type PoolData } from "@/lib/tempo";
 
@@ -23,6 +24,12 @@ export default async function TestMatchPoolPage() {
   return (
     <>
       <Link className="back" href="/#live"><Icon name="arrow" small />All pledges</Link>
+      <MainnetOnly>
+        <div className="card net-note">
+          <span className="k"><span className="live still" />Mainnet</span>
+          <p>Mainnet pool: coming. The sponsor deploys it with $0 in place; anyone can fork the verified contract.</p>
+        </div>
+      </MainnetOnly>
       <LivePoolView base={base} initial={initial} />
     </>
   );

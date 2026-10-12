@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "./Button";
 import { Logo } from "./Logo";
+import { NetSwitch } from "./NetSwitch";
 
 export function SiteNav() {
   return (
@@ -12,6 +13,7 @@ export function SiteNav() {
         <Link href="/make">For funders</Link>
       </div>
       <div className="navr">
+        <NetSwitch />
         <Button href="/make" size="sm">Make a pledge</Button>
       </div>
     </nav>

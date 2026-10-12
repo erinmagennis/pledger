@@ -2,15 +2,12 @@ import { Button } from "../Button";
 import { Icon, type IconName } from "../Icons";
 import { ARTIZEN_RULE, moneyRows, type LineStats, type Pledge } from "@/lib/pledges";
 
-/** Date of the Zcash viewing-key snapshot (see ZCASH in lib/pledges). */
-const ZCASH_CHECKED = "12 Oct 2026";
-
 export function InPlaceCard({ pledge }: { pledge: Pledge }) {
   return (
     <div className="card">
-      {pledge.chain === "Zcash testnet" ? (
+      {pledge.checkedOn ? (
         // A one-time snapshot, not a live check: neutral dot and the snapshot date.
-        <span className="k"><span className="live still" />Checked {ZCASH_CHECKED}</span>
+        <span className="k"><span className="live still" />Checked {pledge.checkedOn}</span>
       ) : (
         <span className="k"><span className="live" />Checked on {pledge.chain}</span>
       )}

@@ -6,8 +6,9 @@ import { PledgeHeader } from "@/components/pledge/PledgeHeader";
 import { ActivityCard, BackersSection, ClaimSection, HowCard, InPlaceCard, ProofStrip, RuleCard, SectionHead } from "@/components/pledge/PledgeCards";
 import { LineCard } from "@/components/claim/LineCard";
 import { ZcashVerify } from "@/components/pledge/ZcashVerify";
+import { ZcashNetworkView } from "@/components/pledge/ZcashNetworkView";
 import { getLineData } from "@/lib/live";
-import { ZCASH_SLUG, getPledge, getPledges, lineStats, withLiveLine } from "@/lib/pledges";
+import { ZCASH, ZCASH_MAINNET, ZCASH_SLUG, getPledge, getPledges, lineStats, withLiveLine, zcashMainnetRisks, zcashPledge, type ZcashPledgeData } from "@/lib/pledges";
 
 type Params = { slug: string };
 
@@ -57,27 +58,28 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
   }
 
   if (base.slug === ZCASH_SLUG) {
+    const main = ZCASH_MAINNET;
     return (
       <>
         <Link className="back" href="/#live"><Icon name="arrow" small />All pledges</Link>
-        <PledgeHeader
-          pledge={base}
-          hideBy
-          sub="The money is visible to anyone with the viewing key. Who gave it is not. The key cannot spend."
+        <ZcashNetworkView
+          testnet={<ZcashBody d={ZCASH} />}
+          mainnet={
+            main.published ? (
+              <ZcashBody d={main} />
+            ) : (
+              <>
+                <div className="card net-note">
+                  <span className="k"><span className="live still" />Zcash mainnet</span>
+                  <h2>Mainnet pledge: coming.</h2>
+                  <p>The funder&apos;s wallet is being set up. The viewing key will be published here.</p>
+                </div>
+                <p className="net-label">Below: the same pledge on Zcash testnet, with test money.</p>
+                <ZcashBody d={ZCASH} />
+              </>
+            )
+          }
         />
-        <section className="pgrid">
-          <div className="pcol">
-            <ActivityCard pledge={base} />
-            <HowCard pledge={base} />
-          </div>
-          <div className="pcol side">
-            <InPlaceCard pledge={base} />
-            <ZcashVerify />
-            <p className="zc-quiet">
-              Anyone with the key can read memos. A funder who pays from a transparent address is visible on chain anyway.
-            </p>
-          </div>
-        </section>
       </>
     );
   }
@@ -94,6 +96,44 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
         </div>
         <div className="pcol side">
           <InPlaceCard pledge={pledge} />
+        </div>
+      </section>
+    </>
+  );
+}
+
+/** One Zcash pledge (testnet proof or mainnet), from its snapshot data. */
+function ZcashBody({ d }: { d: ZcashPledgeData }) {
+  const pledge = zcashPledge(d);
+  const main = d.networkId === "mainnet";
+  return (
+    <>
+      <PledgeHeader
+        pledge={pledge}
+        hideBy
+        sub="The money is visible to anyone with the viewing key. Who gave it is not. The key cannot spend."
+      />
+      <section className="pgrid">
+        <div className="pcol">
+          {main && (
+            <div className="card">
+              <h2>Before you rely on this</h2>
+              <ul className="zc-risks">
+                {zcashMainnetRisks(d).map((r) => <li key={r}>{r}</li>)}
+              </ul>
+            </div>
+          )}
+          <ActivityCard pledge={pledge} />
+          <HowCard pledge={pledge} />
+        </div>
+        <div className="pcol side">
+          <InPlaceCard pledge={pledge} />
+          <ZcashVerify d={d} />
+          {!main && (
+            <p className="zc-quiet">
+              Anyone with the key can read memos. A funder who pays from a transparent address is visible on chain anyway.
+            </p>
+          )}
         </div>
       </section>
     </>

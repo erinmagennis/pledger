@@ -3,6 +3,8 @@ import { Newsreader, Source_Sans_3 } from "next/font/google";
 import { IconSprite } from "@/components/Icons";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
+import { MainnetBanner } from "@/components/NetSwitch";
+import { NetProvider } from "@/lib/network";
 import "@/styles/globals.css";
 
 const sans = Source_Sans_3({
@@ -31,11 +33,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
       <body>
         <IconSprite />
-        <div className="wrap">
-          <SiteNav />
-          {children}
-          <SiteFooter />
-        </div>
+        <NetProvider>
+          <div className="wrap">
+            <SiteNav />
+            <MainnetBanner />
+            {children}
+            <SiteFooter />
+          </div>
+        </NetProvider>
       </body>
     </html>
   );

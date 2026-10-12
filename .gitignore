@@ -6,3 +6,5 @@ out/
 cache/
 .DS_Store
 app/shots/
+*.pem
+*.p12

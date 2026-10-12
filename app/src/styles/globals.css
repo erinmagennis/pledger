@@ -348,3 +348,38 @@ section.gb-sec.gb-rule-sec{padding-top:32px}
 .zc-mono{background:linear-gradient(var(--ground) 30%,rgba(246,244,239,0)) top/100% 24px no-repeat local,linear-gradient(rgba(246,244,239,0),var(--ground) 70%) bottom/100% 24px no-repeat local,linear-gradient(rgba(28,31,29,.14),rgba(28,31,29,0)) top/100% 10px no-repeat scroll,linear-gradient(rgba(28,31,29,0),rgba(28,31,29,.14)) bottom/100% 10px no-repeat scroll}
 .zc-scroll-hint{display:block;font-size:12.5px;color:var(--faint);margin-top:6px}
 .zc-mono:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* network switch (header): testnet by default, mainnet after consent */
+.netsw{position:relative}
+.netsw-seg{display:flex;gap:2px;background:rgba(255,255,255,.7);border:1px solid var(--line);padding:3px;border-radius:999px;backdrop-filter:blur(8px)}
+.netsw-seg button{font:inherit;font-size:14px;font-weight:600;color:var(--soft);background:none;border:0;border-radius:999px;padding:0 12px;min-height:36px;cursor:pointer}
+.netsw-seg button:hover{color:var(--ink)}
+.netsw-seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 0 0 1px var(--line),0 1px 2px rgba(0,0,0,.05)}
+.netsw-seg button:focus-visible,.netsw-panel button:focus-visible,.netbar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.netsw-panel{position:absolute;right:0;top:calc(100% + 10px);width:min(400px,calc(100vw - 32px));padding:22px;z-index:20;text-align:left}
+.netsw-dot{width:8px;height:8px;border-radius:50%;background:var(--peach);box-shadow:0 0 0 4px var(--peach-soft)}
+.netsw-p{font-size:15px;color:var(--ink);margin-top:10px;line-height:1.5}
+.netsw-check{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:15px;font-weight:600;cursor:pointer}
+.netsw-check input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}
+.netsw-check input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.netsw-acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.netsw-acts .btn{border:0;cursor:pointer;font:inherit;font-weight:600;font-size:15px;padding:8px 16px}
+.netsw-acts .btn-ghost{border:1px solid var(--line)}
+.netsw-acts .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+/* mainnet banner: full-bleed thin strip under the header */
+.netbar{margin:0 calc(50% - 50vw) 8px;min-height:32px;padding:4px 16px;display:flex;justify-content:center;align-items:center;gap:6px 14px;flex-wrap:wrap;background:var(--butter-soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:14px;font-weight:600;color:#5c4b16;line-height:1.3;text-align:center}
+.netbar button{font:inherit;font-weight:600;color:var(--accent);background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* mainnet notes on pledge pages */
+.net-note{margin:8px 0 20px;display:flex;flex-direction:column;gap:6px;padding:24px 28px}
+.net-note h2{font-size:20px}
+.net-note p{color:var(--soft);font-size:15px}
+.net-label{font-size:14px;color:var(--soft);margin:28px 0 8px;display:flex;align-items:center;gap:8px}
+.zc-risks{margin-top:12px;padding-left:20px;display:grid;gap:8px;font-size:15px}
+.zc-risks li::marker{color:var(--faint)}
+@media(max-width:600px){
+ .nav{flex-wrap:wrap;row-gap:12px}.nav .navr{display:contents}
+ .netsw{order:3;flex-basis:100%;display:flex;justify-content:flex-end}
+ .netsw-panel{right:0}
+ .netbar{font-size:13px}
+ .net-note{padding:22px}
+}

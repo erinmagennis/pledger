@@ -1,0 +1,21 @@
+{
+  "network": "Zcash mainnet",
+  "networkId": "mainnet",
+  "unit": "ZEC",
+  "published": false,
+  "pool": "Ironwood",
+  "address": null,
+  "addressType": "Orchard-only unified address",
+  "viewingKey": null,
+  "viewingKeyType": "Unified full viewing key",
+  "birthdayHeight": null,
+  "balanceZat": null,
+  "explorerTxUrl": "https://zecblock.com/tx/",
+  "explorerShows": "Fee only. No sender, no recipient, no amount.",
+  "verifiedAt": null,
+  "verifiedBlock": null,
+  "verifiedWith": "zingo-cli",
+  "indexer": "https://zec.rocks:443",
+  "verifyCommand": "zingo-cli --chain mainnet --server https://zec.rocks:443 --viewkey <UFVK> --birthday <BIRTHDAY> --waitsync balance",
+  "spendCheck": "No spend capability"
+}
