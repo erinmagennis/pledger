@@ -217,8 +217,7 @@ svg.i.sm{width:14px;height:14px}
 @media(min-width:901px){.pgrid.demo .pcol.side{position:sticky;top:24px}}
 @media(max-width:900px){.phead .phfloat{display:none}}
 
-/* give-back page v3: header, who's backing it, the line, how it works.
-   Priority by size: header > line card > backer cards > step cards > quiet cards. */
+/* give-back page v4: header, who's backing it, claim your 10%, the line, proof strip. */
 .phead .psub{font-size:19px;color:var(--soft);margin-top:18px;max-width:46ch;text-wrap:pretty}
 .doors{display:flex;gap:28px;margin-top:32px;flex-wrap:wrap}
 .door{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
@@ -246,40 +245,36 @@ section.gb-sec{padding-top:64px}
 /* the line: full width, the biggest card below the header */
 .linecard{padding:34px}
 .linecard .lc-top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px 40px;flex-wrap:wrap;padding-bottom:22px;border-bottom:1px solid var(--line)}
-.lc-order p{color:var(--soft);margin-top:8px;max-width:36ch}
 .lc-stats{display:flex;gap:44px;margin:0}
 .lc-stats div{display:flex;flex-direction:column-reverse}
 .lc-stats dd{margin:0;font-size:40px;font-weight:600;letter-spacing:-.03em;line-height:1.05}
 .lc-stats dt{font-size:14px;color:var(--soft)}
-/* how it works: smaller and quieter */
-.gb-steps{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.gb-step{background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow-soft);padding:22px 24px}
-.gb-step-top{display:flex;justify-content:space-between;align-items:center}
-.gb-step .ico{background:var(--sage-soft);color:var(--accent);width:36px;height:36px;border-radius:10px}
-.gb-n{font-family:var(--font-serif),Newsreader,Georgia,serif;font-style:italic;font-size:28px;line-height:1;color:var(--accent-2)}
-.gb-step h3{font-size:17px;font-weight:600;margin-top:16px}
+/* claim your 10%: one card, steps left, claim panel right */
+.gb-claim{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:40px;align-items:stretch}
+.gb-steps{list-style:none;padding:0;margin:0;display:grid;gap:26px;align-content:center}
+.gb-step{display:grid;grid-template-columns:22px 40px 1fr;gap:16px;align-items:start}
+.gb-n{font-family:var(--font-serif),Newsreader,Georgia,serif;font-style:italic;font-size:28px;line-height:40px;color:var(--accent-2);text-align:center}
+.gb-step .ico{background:var(--sage-soft);color:var(--accent)}
+.gb-step h3{font-size:17px;font-weight:600;line-height:1.35;padding-top:2px}
 .gb-step p{font-size:15px;color:var(--soft);margin-top:4px}
-.gb-quiet{margin-top:20px;align-items:start}
-.gb-qcard{border-radius:var(--r-md);background:rgba(255,255,255,.5);border:1px solid var(--line);padding:22px 24px}
-.gb-qcard h3{font-size:17px}
-.gb-qcard .ico{width:36px;height:36px;border-radius:10px;color:var(--accent);margin-bottom:14px}
-.gb-qcard>p{font-size:15px;color:var(--soft);margin-top:4px}
-.facts{margin:10px 0 0;font-size:14px}
-.facts div{display:flex;justify-content:space-between;gap:16px;padding:8px 0}
-.facts div+div{border-top:1px solid var(--line)}
-.facts dt{color:var(--soft)}
-.facts dd{margin:0;text-align:right;font-weight:600}
-.gb-tl{list-style:none;padding:14px 0 0;margin:6px 0 0;border-top:1px solid var(--line);display:grid;gap:10px;font-size:14px}
-.gb-tl li{position:relative;display:grid;grid-template-columns:96px 1fr;gap:12px;padding-left:20px}
-.gb-tl li::before{content:"";position:absolute;left:0;top:.5em;width:8px;height:8px;border-radius:50%;background:var(--thread)}
-.gb-tl li:first-child::before{background:#3f9d6b;box-shadow:0 0 0 3px rgba(63,157,107,.18)}
-.gb-tl li+li::after{content:"";position:absolute;left:3.5px;top:calc(-10px - .2em);height:calc(10px + .6em);width:1px;background:var(--line)}
-.gb-tl time{color:var(--faint)}
+.gb-panel{background:var(--sage-soft);border-radius:var(--r-sm);padding:28px;display:flex;flex-direction:column;gap:24px;align-items:flex-start}
+.gb-keep{border-top:1px solid rgba(47,90,62,.16);padding-top:22px}
+.gb-keep h3{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--accent)}
+.gb-keep p{font-size:15px;color:var(--soft);margin-top:6px}
+/* proof: slim quiet strip at the bottom */
+.gb-proof{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 32px;font-size:13.5px;color:var(--soft)}
+.gb-facts{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
+.gb-facts li{border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:rgba(255,255,255,.5)}
+.gb-dated{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px 24px}
+.gb-dated time{color:var(--faint);margin-right:4px}
 @media(max-width:900px){
  .doors{flex-direction:column;gap:20px}
  section.gb-sec{padding-top:44px}
  .gb-h{font-size:24px;margin-bottom:16px}
- .gb-two,.gb-steps{grid-template-columns:1fr}
+ .gb-two,.gb-claim{grid-template-columns:1fr}
+ .gb-claim{gap:28px;padding:24px 22px}
+ .gb-panel{padding:22px}
+ .gb-proof{margin-top:44px}
  .gb-amount{font-size:28px}
  .gb-invite,.linecard{padding:24px 22px}
  .lc-stats{gap:24px;width:100%}.lc-stats dd{font-size:28px}

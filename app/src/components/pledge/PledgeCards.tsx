@@ -97,61 +97,64 @@ export function BackersSection() {
 }
 
 const STEPS: { icon: IconName; title: string; text: string }[] = [
-  { icon: "mail", title: "Send your receipt email", text: "Pledger checks Artizen's signature on it. No screenshots." },
-  { icon: "list", title: "Join the line", text: "Each receipt counts once. Self-backers go first." },
-  { icon: "coin", title: "Get paid on Base", text: "Every payment is checked and recorded in public." },
+  {
+    icon: "mail",
+    title: "Download your receipt email",
+    text: "From your inbox, the original email Artizen sent. Pledger checks its signature, so no screenshots.",
+  },
+  { icon: "wallet", title: "Connect your wallet and sign", text: "Signing is free. Your wallet is where you get paid." },
+  { icon: "list", title: "Join the line", text: "Each receipt counts once. You can check your place anytime." },
 ];
 
-/** How it works: three step cards, then what we keep and the proof. Quieter than the sections above. */
-export function HowItWorksSection({ pledge }: { pledge: Pledge }) {
-  const facts = [
-    { label: "Pledge", value: "50% of Colosseum winnings" },
-    { label: "Who can claim", value: "People who paid the 10% fee" },
-    { label: "Season", value: "7" },
-    { label: "Chain", value: pledge.chain },
-    { label: "Records", value: `Public on ${pledge.chain} via EAS` },
-  ];
+/** Claim your 10%: one card. Steps on the left, the claim button and what we keep on the right. */
+export function ClaimSection() {
   return (
-    <section className="gb-sec" aria-labelledby="gb-how">
-      <SectionHead id="gb-how" title="How it works" />
-      <ol className="gb-steps">
-        {STEPS.map((s, i) => (
-          <li className="gb-step" key={s.title}>
-            <div className="gb-step-top">
-              <span className="ico"><Icon name={s.icon} /></span>
+    <section className="gb-sec" aria-labelledby="gb-claim">
+      <SectionHead id="gb-claim" title="Claim your 10%" />
+      <div className="card gb-claim">
+        <ol className="gb-steps">
+          {STEPS.map((s, i) => (
+            <li className="gb-step" key={s.title}>
               <span className="gb-n">{i + 1}</span>
-            </div>
-            <h3>{s.title}</h3>
-            <p>{s.text}</p>
+              <span className="ico"><Icon name={s.icon} /></span>
+              <div>
+                <h3>{s.title}</h3>
+                <p>{s.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <aside className="gb-panel">
+          <Button href="/claim">Check or add your claim</Button>
+          <div className="gb-keep">
+            <h3><Icon name="shield" small />What we keep</h3>
+            <p>
+              A fingerprint of each receipt, the project, date and fee, your wallet and how you want to be
+              shown. Never your email or its contents.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+/** Proof: a slim, quiet strip at the bottom. Fact chips, then the dated entries, oldest first. */
+export function ProofStrip({ pledge }: { pledge: Pledge }) {
+  const facts = ["Pledge 50% of Colosseum winnings", "Season 7", pledge.chain, `Records public on ${pledge.chain} via EAS`];
+  const dated = [...pledge.activity].reverse();
+  return (
+    <section className="gb-proof" aria-label="Proof">
+      <ul className="gb-facts">
+        {facts.map((f) => <li key={f}>{f}</li>)}
+      </ul>
+      <ol className="gb-dated">
+        {dated.map((a, i) => (
+          <li key={i}>
+            <time>{a.date.replace(/ \d{4}$/, "")}</time> {a.text}
           </li>
         ))}
       </ol>
-      <div className="gb-two gb-quiet">
-        <div className="gb-qcard">
-          <span className="ico"><Icon name="shield" /></span>
-          <h3>What we keep</h3>
-          <p>
-            A fingerprint of each receipt, the project, date and fee, your wallet and how you want to be
-            shown. Never your email or its contents.
-          </p>
-        </div>
-        <div className="gb-qcard">
-          <h3>Proof</h3>
-          <dl className="facts">
-            {facts.map((f) => (
-              <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>
-            ))}
-          </dl>
-          <ol className="gb-tl">
-            {pledge.activity.map((a, i) => (
-              <li key={i}>
-                <time>{a.date}</time>
-                <span>{a.text}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
     </section>
   );
 }

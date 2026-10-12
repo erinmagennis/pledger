@@ -16,10 +16,7 @@ export function LineCard({ initial }: { initial?: LineStats }) {
   return (
     <div className="card linecard">
       <div className="lc-top">
-        <div className="lc-order">
-          <span className="k"><span className="live" />Live</span>
-          <p>Self-backers first, smallest first. Then everyone else, smallest first.</p>
-        </div>
+        <span className="k lc-live"><span className="live" />Live</span>
         <dl className="lc-stats">
           <div><dt>in line</dt><dd>{st.people}</dd></div>
           <div><dt>fees claimed</dt><dd>{formatCents(st.feesCents)}</dd></div>

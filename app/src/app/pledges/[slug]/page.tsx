@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icons";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
-import { ActivityCard, BackersSection, HowCard, HowItWorksSection, InPlaceCard, SectionHead } from "@/components/pledge/PledgeCards";
+import { ActivityCard, BackersSection, ClaimSection, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
 import { LineCard } from "@/components/claim/LineCard";
 import { getLineData } from "@/lib/live";
 import { getPledge, getPledges, lineStats, withLiveLine } from "@/lib/pledges";
@@ -44,11 +44,12 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
           float={{ icon: "shield", title: "Claims checked by email signature", sub: "Season 7 receipts" }}
         />
         <BackersSection />
+        <ClaimSection />
         <section className="gb-sec" aria-labelledby="gb-line">
           <SectionHead id="gb-line" title="The line" />
           <LineCard initial={st} />
         </section>
-        <HowItWorksSection pledge={pledge} />
+        <ProofStrip pledge={pledge} />
       </>
     );
   }
