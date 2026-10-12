@@ -2,15 +2,15 @@
 
 // "Help pay people back": pick an amount or a number of people; the server splits it across the line
 // in order, then the helper sends USDC on Base straight to each person (one batch when the wallet allows).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { encodeFunctionData, type Hex } from "viem";
 import { useCapabilities, useConfig, useConnection, useConnect, useConnectors, usePublicClient, useSendCalls, useSwitchChain, useWriteContract } from "wagmi";
 import { waitForCallsStatus } from "wagmi/actions";
 import { base } from "wagmi/chains";
 import { Icon } from "@/components/Icons";
 import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
-import { formatCents } from "@/lib/claims";
-import { hold, myHeldPids } from "./holds";
+import { formatCents, shortAddress, unitsToCents } from "@/lib/claims";
+import { forgetSent, hold, loadSent, myHeldPids, rememberSent, sentId, worthRetrying, type SentTx } from "./holds";
 
 type PreviewTransfer = { pid: string; address: string; shortAddress: string; label: string; places: number[]; amountUnits: string; amountCents: number };
 type Preview = { transfers: PreviewTransfer[]; totalCents: number; leftoverCents: number; nextCents: number; heldCount?: number };
@@ -29,8 +29,13 @@ const allocBody = (key: string) => JSON.stringify({ ...JSON.parse(key), mine: my
 
 const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
 
-/** A failure worth checking again later: not on Base yet, or the server had trouble. Anything else is the rule saying no. */
-const retryable = (status: number, error: string) => status >= 500 || /not found/i.test(error);
+/** A sent transfer as kept in this browser until it is recorded, and back. */
+const toStored = (s: Sent): SentTx => ({ from: "help", pid: s.t.pid, address: s.t.address, amountUnits: s.t.amountUnits, txs: s.txs, label: s.t.label, at: Date.now() });
+const fromStored = (s: SentTx): Sent => ({
+  t: { pid: s.pid, address: s.address, shortAddress: shortAddress(s.address), label: s.label ?? "", places: [], amountUnits: s.amountUnits, amountCents: unitsToCents(BigInt(s.amountUnits)) },
+  txs: s.txs,
+});
+const idOf = (s: Sent) => sentId({ address: s.t.address, txs: s.txs });
 
 /** Record one person's share of a tx. Already recorded counts as done. `note` is set when it was stored as an extra. */
 async function record(address: string, txHash: string): Promise<{ ok: true; note?: string } | { ok: false; error: string; final: boolean }> {
@@ -43,7 +48,7 @@ async function record(address: string, txHash: string): Promise<{ ok: true; note
   if (res.ok) return j.kind === "extra" && j.message ? { ok: true, note: String(j.message) } : { ok: true };
   if (res.status === 409 && /already recorded/i.test(j.error ?? "")) return { ok: true };
   const error = j.error || "Could not check that payment";
-  return { ok: false, error, final: !retryable(res.status, error) };
+  return { ok: false, error, final: !worthRetrying(res.status, error) };
 }
 
 function shortErr(e: unknown, fallback: string) {
@@ -76,6 +81,9 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
   // Sent but not yet recorded. While this holds anything, the button checks again instead of sending.
   const [pending, setPending] = useState<Sent[]>([]);
   const [callsId, setCallsId] = useState<{ id: string; list: PreviewTransfer[] } | null>(null);
+  // True while payments sent on an earlier visit (kept in this browser) are checked again.
+  const [replaying, setReplaying] = useState(false);
+  const replayed = useRef(false);
 
   const config = useConfig();
   const { isConnected, chainId } = useConnection();
@@ -142,7 +150,8 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     list.map((t, i) => ({ t, txs: txs.length === list.length ? [txs[i]!, ...txs.filter((_, j) => j !== i)] : txs }));
 
   /** Record each sent transfer. Returns the ones still worth checking again, with every error.
-   * A transfer every hash of which got a final rule rejection is dropped, so Send comes back. */
+   * A transfer every hash of which got a final rule rejection is dropped, so Send comes back.
+   * Recorded or dropped transfers are also forgotten by this browser. */
   async function recordAll(items: Sent[]): Promise<{ left: Sent[]; failed: string[]; notes: string[] }> {
     const left: Sent[] = [];
     const failed: string[] = [];
@@ -166,6 +175,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
         if (!final) left.push(item);
         failed.push(`${item.t.label || item.t.shortAddress}: ${last}`);
       }
+      if (ok || final) forgetSent([idOf(item)]);
     }
     return { left, failed, notes };
   }
@@ -194,7 +204,9 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
       throw new Error("The batch did not go through on Base");
     }
     setCallsId(null);
-    setPending(pairUp(list, txs));
+    const sent = pairUp(list, txs);
+    rememberSent(sent.map(toStored));
+    setPending(sent);
     return txs;
   }
 
@@ -213,18 +225,26 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
           chainId: base.id,
         });
         const item = { t, txs: [h] };
+        rememberSent([toStored(item)]);
         setPending((p) => [...p, item]);
         txs.push(h);
         setHashes([...txs]);
         const receipt = client ? await client.waitForTransactionReceipt({ hash: h }) : null;
         if (receipt?.status !== "success") {
-          if (receipt) setPending((p) => p.filter((x) => x !== item)); // reverted: nothing moved
+          if (receipt) {
+            // reverted: nothing moved
+            setPending((p) => p.filter((x) => x !== item));
+            forgetSent([idOf(item)]);
+          }
           throw new Error(receipt ? "That payment failed on Base" : "Could not confirm on Base. Check again in a minute.");
         }
         sent.push(t);
         setProgress(`${i + 1} of ${list.length} sent`);
         const r = await record(t.address, h);
-        if (r.ok || r.final) setPending((p) => p.filter((x) => x !== item));
+        if (r.ok || r.final) {
+          setPending((p) => p.filter((x) => x !== item));
+          forgetSent([idOf(item)]);
+        }
         if (!r.ok) setErr(`${t.label || t.shortAddress}: ${r.error}`);
         else if (r.note) setNotes((n) => [...n, `${t.label || t.shortAddress}: ${r.note}`]);
       } catch (e) {
@@ -245,13 +265,13 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     return sameTransfers(list, (j as Preview).transfers);
   }
 
-  /** Re-check payments already sent, instead of sending again. */
-  async function checkAgain() {
+  /** Re-check payments already sent, instead of sending again. `given` is set when replaying an earlier visit. */
+  async function checkAgain(given?: Sent[]) {
     setBusy(true);
     setErr(null);
     try {
       // A batch that timed out has no hashes yet: wait for Base first.
-      const items = callsId ? pairUp(callsId.list, await confirmBatch(callsId.id, callsId.list)) : pending;
+      const items = given ?? (callsId ? pairUp(callsId.list, await confirmBatch(callsId.id, callsId.list)) : pending);
       setProgress("Checking each payment…");
       const r = await recordAll(items);
       setPending(r.left);
@@ -267,6 +287,19 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
       setBusy(false);
     }
   }
+
+  // Payments sent on an earlier visit that were never recorded (tab closed, a lost answer): check them again
+  // through the same path as the button. Once only, also under StrictMode's double effects.
+  useEffect(() => {
+    if (replayed.current) return;
+    replayed.current = true;
+    const items = loadSent("help").map(fromStored);
+    if (!items.length) return;
+    setPending(items);
+    setReplaying(true);
+    void checkAgain(items).finally(() => setReplaying(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function send() {
     if (!count || !preview || pending.length || callsId) return;
@@ -422,7 +455,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
       ) : (
         <div className="cl-row" style={{ marginTop: 16 }}>
           {waiting ? (
-            <button className="btn btn-primary" disabled={busy} onClick={checkAgain}>
+            <button className="btn btn-primary" disabled={busy} onClick={() => checkAgain()}>
               {busy ? "Working…" : "Check again"}
             </button>
           ) : (
@@ -439,6 +472,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
       )}
 
       <div className="cl-status">
+        {replaying && <span className="cl-soft">Checking a payment you sent earlier…</span>}
         {progress && <span>{progress}</span>}
         {done && <span>{done}</span>}
         {notes.map((n) => (

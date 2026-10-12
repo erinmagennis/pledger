@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useConnection, useConnect, useConnectors, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { base } from "wagmi/chains";
 import { Icon } from "@/components/Icons";
 import { CardPay } from "./CardPay";
 import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
 import { centsToUnits, formatCents, type LineEntry } from "@/lib/claims";
-import { hold } from "./holds";
+import { forgetSent, hold, loadSent, rememberSent, sentId, worthRetrying } from "./holds";
+
+/** Thrown when a payment could not be recorded. `final` is the rule saying no for good; otherwise check again later. */
+class RecordError extends Error {
+  constructor(message: string, readonly final: boolean) {
+    super(message);
+  }
+}
 
 async function recordPayment(claimAddress: string, txHash: string): Promise<string> {
   const res = await fetch("/api/payments/verify", {
@@ -16,10 +23,27 @@ async function recordPayment(claimAddress: string, txHash: string): Promise<stri
     body: JSON.stringify({ claimAddress, txHash }),
   });
   const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.error || "Could not check that payment");
+  if (res.status === 409 && /already recorded/i.test(j.error ?? "")) return "This payment is already recorded.";
+  if (!res.ok) {
+    const error = j.error || "Could not check that payment";
+    throw new RecordError(error, !worthRetrying(res.status, error));
+  }
   // Real money that did not match what was owed: stored as an extra and shown on the row, never counted.
   if (j.kind === "extra" && j.message) return String(j.message);
   return `Payment of ${formatCents(j.amountCents)} recorded.`;
+}
+
+/** Record a tx this panel sent, and forget it in this browser once it is recorded or turned away for good. */
+async function recordSent(claimAddress: string, txHash: string): Promise<string> {
+  const id = sentId({ address: claimAddress, txs: [txHash] });
+  try {
+    const m = await recordPayment(claimAddress, txHash);
+    forgetSent([id]);
+    return m;
+  } catch (e) {
+    if (e instanceof RecordError && e.final) forgetSent([id]);
+    throw e;
+  }
 }
 
 /** What this person owes right now across all their places, from the live line. */
@@ -29,6 +53,9 @@ async function currentOwed(pid: string): Promise<number> {
   if (!res.ok || !Array.isArray(j.line)) throw new Error(j.error || "Could not load the line");
   return (j.line as LineEntry[]).filter((e) => e.pid === pid).reduce((s, e) => s + Math.max(0, e.feeCents - e.paidCents), 0);
 }
+
+/** People whose earlier payment one panel on this page is already checking again. */
+const replayedPids = new Set<string>();
 
 /**
  * Pay one person in line with USDC on Base, or record a payment made elsewhere.
@@ -42,6 +69,9 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
   const [err, setErr] = useState<string | null>(null);
   const [pasted, setPasted] = useState("");
   const [hash, setHash] = useState<string | null>(null);
+  // True while a payment sent on an earlier visit (kept in this browser) is checked again.
+  const [replaying, setReplaying] = useState(false);
+  const replayed = useRef(false);
 
   const { isConnected, chainId } = useConnection();
   const connectors = useConnectors();
@@ -49,6 +79,33 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
   const switchChain = useSwitchChain();
   const write = useWriteContract();
   const client = usePublicClient({ chainId: base.id });
+
+  // A payment to this person sent on an earlier visit and never recorded: check it again, once per page.
+  // A person can have two rows (two groups); the first unpaid one does it.
+  useEffect(() => {
+    if (replayed.current || entry.status === "paid") return;
+    replayed.current = true;
+    const stored = loadSent("pay").find((s) => s.pid === entry.pid);
+    if (!stored || replayedPids.has(entry.pid)) return;
+    replayedPids.add(entry.pid);
+    const tx = stored.txs[0]!;
+    setAddress(stored.address);
+    setHash(tx);
+    setOpen(true);
+    setReplaying(true);
+    setBusy(true);
+    recordSent(stored.address, tx)
+      .then((m) => {
+        setMsg(m);
+        onPaid();
+      })
+      .catch((e) => setErr(e instanceof Error ? e.message : "Could not check that payment"))
+      .finally(() => {
+        setReplaying(false);
+        setBusy(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const remaining = Math.max(0, owedCents);
   if (entry.status === "paid") return null;
@@ -91,15 +148,17 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
         chainId: base.id,
       });
       setHash(tx);
+      rememberSent([{ from: "pay", pid: entry.pid, address, amountUnits: centsToUnits(remaining).toString(), txs: [tx], label: entry.label, at: Date.now() }]);
       setMsg("Sent. Waiting for Base to confirm…");
       if (client) {
         const receipt = await client.waitForTransactionReceipt({ hash: tx });
         if (receipt.status !== "success") {
           setHash(null); // nothing moved, so paying again is safe
+          forgetSent([sentId({ address, txs: [tx] })]);
           throw new Error("That payment failed on Base");
         }
       }
-      setMsg(await recordPayment(address, tx));
+      setMsg(await recordSent(address, tx));
       onPaid();
     } catch (e) {
       const m = e instanceof Error ? e.message : "Payment failed";
@@ -115,7 +174,7 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
     setBusy(true);
     setErr(null);
     try {
-      setMsg(await recordPayment(address, hash));
+      setMsg(await recordSent(address, hash));
       onPaid();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not check that payment");
@@ -187,6 +246,7 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
             <button className="btn btn-ghost" disabled={busy || !pasted.trim() || !address} onClick={submitPasted}>Check</button>
           </div>
           {hash && <a className="cl-soft" href={BASESCAN_TX + hash} target="_blank" rel="noreferrer">View on Basescan</a>}
+          {replaying && <span className="cl-soft">Checking a payment you sent earlier…</span>}
           {msg && <span>{msg}</span>}
           {err && <span className="cl-error">{err}</span>}
         </div>

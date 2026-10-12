@@ -54,21 +54,48 @@ export async function attest(input: RecordInput): Promise<RecordResult> {
   }
 }
 
+/** A placeholder with no error yet may belong to a request still attesting it. Past this age it is taken as stuck
+ * (the function was cut off after the slot insert) and is retried. */
+export const STUCK_MS = 10 * 60 * 1000;
+
+/** The error a row carries while a retry is attesting it, followed by the start time. */
+const RETRYING = "retrying since ";
+
+type Slot = { state?: string; error?: string | null; created_at?: string };
+
+/** True when an existing (claim_id, status) row should be attested again: pending, and either a finished
+ * failed try (error set) or a placeholder old enough to be stuck. A recorded row, or a fresh placeholder, is left alone. */
+export function retryable(slot: Slot, now = Date.now()): boolean {
+  if (slot.state !== "pending") return false;
+  // A retry in flight carries its start time, so it is left alone until it too looks stuck.
+  const busy = slot.error?.startsWith(RETRYING) ? slot.error.slice(RETRYING.length) : !slot.error ? slot.created_at : null;
+  if (busy === null) return true; // a finished try that failed
+  const at = busy ? Date.parse(busy) : NaN;
+  return Number.isFinite(at) && now - at > STUCK_MS;
+}
+
 /** Attest each claim in turn and store the outcome. Errors are swallowed into "pending" rows.
- * Each claim and status is attested at most once, so a person is never attested as paid twice. */
-export async function recordClaims(db: SupabaseClient, inputs: RecordInput[], doAttest: typeof attest = attest): Promise<void> {
+ * Each claim and status is recorded at most once: a recorded row is never attested again, and a pending row
+ * is retried in place, claimed first with a compare-and-set so two racing retries attest once. */
+export async function recordClaims(db: SupabaseClient, inputs: RecordInput[], doAttest: typeof attest = attest, now = Date.now()): Promise<void> {
   for (const input of inputs) {
     try {
       // Claim the slot first with a placeholder row. This relies on the unique index on
       // (claim_id, status) from sql/004: of two requests racing here, only one insert succeeds,
-      // so only one sends an on-chain attestation. 23505 means another request has it: skip.
+      // so only one sends an on-chain attestation. 23505 means a row exists: retry it only if it is pending.
       const slot = await db.from("pledger_attestations").insert({
         claim_id: input.claimId,
         fingerprint: input.fingerprint,
         status: input.status,
         state: "pending",
       });
-      if (slot.error) continue; // 23505, or cannot tell what is recorded: never risk a second attestation
+      if (slot.error) {
+        if (slot.error.code !== "23505") {
+          console.warn("[pledger] attestation slot not saved", { claimId: input.claimId, status: input.status, code: slot.error.code });
+          continue;
+        }
+        if (!(await claimRetry(db, input, now))) continue;
+      }
       const r = await doAttest(input);
       await db
         .from("pledger_attestations")
@@ -85,4 +112,26 @@ export async function recordClaims(db: SupabaseClient, inputs: RecordInput[], do
       // keep going; the claim itself is already stored
     }
   }
+}
+
+/** Read the existing row and, when it is worth retrying, take it with a compare-and-set on its error
+ * (set to "retrying since <time>"), so only one request re-attests. False means skip: recorded, fresh, unreadable or taken. */
+async function claimRetry(db: SupabaseClient, input: RecordInput, now: number): Promise<boolean> {
+  const read = await db
+    .from("pledger_attestations")
+    .select("state, error, created_at")
+    .eq("claim_id", input.claimId)
+    .eq("status", input.status)
+    .maybeSingle();
+  if (read.error || !read.data) return false; // cannot tell what is recorded: never risk a second attestation
+  const row = read.data as Slot;
+  if (!retryable(row, now)) return false;
+  const q = db
+    .from("pledger_attestations")
+    .update({ error: RETRYING + new Date(now).toISOString() })
+    .eq("claim_id", input.claimId)
+    .eq("status", input.status)
+    .eq("state", "pending");
+  const took = await (row.error ? q.eq("error", row.error) : q.is("error", null)).select("claim_id");
+  return !took.error && (took.data?.length ?? 0) > 0;
 }

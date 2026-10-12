@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { friendlyReason, nameProblem, NO_FEE } from "@/lib/claims";
-import { recordClaims, type RecordInput } from "@/lib/eas";
+import { STUCK_MS, recordClaims, retryable, type RecordInput } from "@/lib/eas";
 import { checkUploads } from "@/lib/claims-server";
 import { fakeDb } from "./fake-db";
 
@@ -75,5 +75,54 @@ describe("paid attestations are written once", () => {
     await recordClaims(f.db, [input("c1")], async () => ({ state: "pending" as const, error: "rpc down" }));
     expect(f.tables.pledger_attestations![0]).toMatchObject({ state: "pending", uid: null, error: "rpc down" });
     expect(f.tables.pledger_claims![0]!.record_state).toBe("pending");
+  });
+
+  it("retries a pending row in place on the next call, and it becomes recorded", async () => {
+    const f = fakeDb({ pledger_attestations: [], pledger_claims: [{ id: "c1" }] }, UNIQUE);
+    await recordClaims(f.db, [input("c1")], async () => ({ state: "pending" as const, error: "rpc down" }));
+    const attest = vi.fn(async () => ({ state: "recorded" as const, uid: "0xuid", txHash: "0xtx" }));
+    await recordClaims(f.db, [input("c1")], attest);
+    expect(attest).toHaveBeenCalledTimes(1);
+    expect(f.tables.pledger_attestations).toEqual([{ claim_id: "c1", fingerprint: "ab", status: "paid", state: "recorded", uid: "0xuid", tx_hash: "0xtx", error: null }]);
+    expect(f.tables.pledger_claims![0]!.record_state).toBe("recorded");
+  });
+
+  it("never attests a recorded row again", async () => {
+    const f = fakeDb({ pledger_attestations: [{ claim_id: "c1", status: "paid", state: "recorded", uid: "0xold", error: null }], pledger_claims: [{ id: "c1" }] }, UNIQUE);
+    const attest = vi.fn(recorded);
+    await recordClaims(f.db, [input("c1")], attest);
+    expect(attest).not.toHaveBeenCalled();
+    expect(f.tables.pledger_attestations![0]).toMatchObject({ state: "recorded", uid: "0xold" });
+  });
+
+  it("leaves a fresh placeholder to the request that made it, and retries one stuck past STUCK_MS", async () => {
+    const now = Date.parse("2026-10-12T12:00:00Z");
+    const row = (createdAt: string) => ({ claim_id: "c1", status: "paid", state: "pending", uid: null, error: null, created_at: createdAt });
+    const fresh = fakeDb({ pledger_attestations: [row("2026-10-12T11:59:00Z")], pledger_claims: [{ id: "c1" }] }, UNIQUE);
+    const attest = vi.fn(recorded);
+    await recordClaims(fresh.db, [input("c1")], attest, now);
+    expect(attest).not.toHaveBeenCalled();
+    const stuck = fakeDb({ pledger_attestations: [row(new Date(now - STUCK_MS - 1000).toISOString())], pledger_claims: [{ id: "c1" }] }, UNIQUE);
+    await recordClaims(stuck.db, [input("c1")], attest, now);
+    expect(attest).toHaveBeenCalledTimes(1);
+    expect(stuck.tables.pledger_attestations![0]).toMatchObject({ state: "recorded", uid: "0xuid" });
+  });
+
+  it("two racing retries of one pending row attest once", async () => {
+    const f = fakeDb({ pledger_attestations: [{ claim_id: "c1", status: "paid", state: "pending", uid: null, error: "rpc down" }], pledger_claims: [{ id: "c1" }] }, UNIQUE);
+    const attest = vi.fn(recorded);
+    await Promise.all([recordClaims(f.db, [input("c1")], attest), recordClaims(f.db, [input("c1")], attest)]);
+    expect(attest).toHaveBeenCalledTimes(1);
+    expect(f.tables.pledger_attestations![0]).toMatchObject({ state: "recorded" });
+  });
+
+  it("decides what to retry from the row alone", () => {
+    const now = Date.parse("2026-10-12T12:00:00Z");
+    expect(retryable({ state: "recorded", error: null }, now)).toBe(false);
+    expect(retryable({ state: "pending", error: "rpc down" }, now)).toBe(true);
+    expect(retryable({ state: "pending", error: null, created_at: "2026-10-12T11:55:00Z" }, now)).toBe(false);
+    expect(retryable({ state: "pending", error: null, created_at: "2026-10-12T11:45:00Z" }, now)).toBe(true);
+    expect(retryable({ state: "pending", error: "retrying since 2026-10-12T11:55:00.000Z" }, now)).toBe(false);
+    expect(retryable({ state: "pending", error: "retrying since 2026-10-12T11:45:00.000Z" }, now)).toBe(true);
   });
 });

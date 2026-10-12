@@ -1,4 +1,4 @@
-// A tiny in-memory stand-in for the Supabase client: enough of select/insert/update/delete/eq/in/gt/lt/order/
+// A tiny in-memory stand-in for the Supabase client: enough of select/insert/update/delete/eq/is/in/gt/lt/order/
 // range/limit for the server libs. `schema.missing` lists tables that do not exist yet (PostgREST PGRST205);
 // `schema.columns` limits the columns an insert may use (an unknown one fails with PGRST204) and a filter may
 // use (Postgres 42703), to act out the database before a sql/ file runs. Column defaults (sql/005's
@@ -66,6 +66,7 @@ export function fakeDb(tables: Record<string, Row[]>, uniques: Record<string, st
       range: (from: number, to: number) => ((slice = [from, to + 1]), q),
       limit: (n: number) => ((slice = [0, n]), q),
       eq: (k: string, v: unknown) => where(k, (x) => x === v),
+      is: (k: string, v: null) => where(k, (x) => (x ?? null) === v),
       in: (k: string, vs: unknown[]) => where(k, (x) => vs.includes(x)),
       gt: (k: string, v: string) => where(k, (x) => String(x) > v),
       lt: (k: string, v: string) => where(k, (x) => String(x) < v),

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Hex } from "viem";
 import { BASE_USDC, TRANSFER_TOPIC, checkPaymentRule, usdcTransfersTo, type CheckedPayment, type ReceiptLike } from "@/lib/base";
 import type { LineEntry } from "@/lib/claims";
@@ -79,7 +80,8 @@ function claimRow(id: string, feeCents: number, selfBacked: boolean, created = "
 /** The database before sql/005: pledger_payments has no `kind` column. */
 const BEFORE_005: FakeSchema = { columns: { pledger_payments: ["tx_hash", "to_address", "amount_units", "block_number", "block_time"] } };
 
-function setup(opts: { payments?: Record<string, unknown>[]; units?: bigint; blockTime?: string; check?: CheckedPayment; schema?: FakeSchema } = {}) {
+/** `wrap` swaps the client the payment code sees (to act out a failing read). */
+function setup(opts: { payments?: Record<string, unknown>[]; units?: bigint; blockTime?: string; check?: CheckedPayment; schema?: FakeSchema; wrap?: (db: SupabaseClient) => SupabaseClient } = {}) {
   const f = fakeDb(
     { pledger_claims: [claimRow("1", 1000, true), claimRow("2", 500, false)], pledger_payments: opts.payments ?? [] },
     { pledger_payments: ["tx_hash", "to_address"] },
@@ -92,7 +94,8 @@ function setup(opts: { payments?: Record<string, unknown>[]; units?: bigint; blo
     attest: async (_db, inputs) => void attested.push(inputs),
     later: (fn) => void fn(),
   };
-  return { ...f, attested, run: (tx: Hex = TX) => recordUsdcPayment(f.db, A, tx, deps) };
+  const db = opts.wrap ? opts.wrap(f.db) : f.db;
+  return { ...f, attested, run: (tx: Hex = TX) => recordUsdcPayment(db, A, tx, deps) };
 }
 
 describe("recordUsdcPayment", () => {
@@ -183,12 +186,13 @@ describe("recordUsdcPayment", () => {
     expect(s.attested).toHaveLength(1);
   });
 
-  it("does not attest again for someone already paid (the new payment is an extra)", async () => {
+  it("an extra for someone already paid retries their paid records (recordClaims skips recorded ones)", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const earlier = { tx_hash: TX2, to_address: A, amount_units: "15000000", block_time: "2026-10-11T00:00:00Z" };
     const s = setup({ payments: [earlier], units: usd(15) });
     expect(await s.run()).toMatchObject({ ok: true, extra: { message: "Recorded as extra: it does not match what this person is owed ($0.00)" } });
-    expect(s.attested).toHaveLength(0);
+    expect(s.attested).toHaveLength(1);
+    expect(s.attested[0]!.map((i) => i.status)).toEqual(["paid", "paid"]);
     // Before sql/005 it is rejected as before.
     const old = setup({ payments: [{ ...earlier }], units: usd(15), schema: BEFORE_005 });
     expect(await old.run()).toMatchObject({ ok: false, error: "Does not match what is owed ($0.00)" });
@@ -220,6 +224,36 @@ describe("recordUsdcPayment", () => {
     const s = setup({ units: usd(10), schema: { insertError: { pledger_payments: { code: "08006", message: "connection failure" } } } });
     expect(await s.run()).toEqual({ ok: false, status: 500, error: "Could not save the payment" });
     expect(warn).toHaveBeenCalledWith("[pledger] extra not saved", { txHash: TX, code: "08006" });
+    warn.mockRestore();
+  });
+
+  it("an extra for someone not yet paid does not attest", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const s = setup({ units: usd(10) });
+    expect(await s.run()).toMatchObject({ ok: true, extra: expect.anything() });
+    expect(s.attested).toHaveLength(0);
+    vi.restoreAllMocks();
+  });
+
+  it("still attests on the step to all paid when the re-read after saving fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // Every pledger_payments read made after the payment insert fails, like a dropped connection.
+    let saved = false;
+    const wrap = (db: SupabaseClient) =>
+      ({
+        from: (name: string) => {
+          const q = db.from(name) as unknown as Record<string, unknown>;
+          if (name !== "pledger_payments") return q;
+          if (saved) return { ...q, select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ range: async () => ({ data: null, error: { code: "08006" } }), limit: async () => ({ data: null, error: { code: "08006" } }) }) }), order: () => ({ range: async () => ({ data: null, error: { code: "08006" } }) }) }) }) };
+          const insert = q.insert as (r: unknown) => unknown;
+          return { ...q, insert: (r: unknown) => ((saved = true), insert(r)) };
+        },
+      }) as unknown as SupabaseClient;
+    const s = setup({ units: usd(15), wrap });
+    expect((await s.run()).ok).toBe(true);
+    expect(s.tables.pledger_payments).toHaveLength(1);
+    expect(warn).toHaveBeenCalledWith("[pledger] payments re-read failed, using the saved row", { txHash: TX, to: A });
+    expect(s.attested).toHaveLength(1);
     warn.mockRestore();
   });
 

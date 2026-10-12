@@ -12,7 +12,8 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
 
 /** Check a Base mainnet USDC payment to a claimant and record it once. */
 export async function POST(req: Request) {
-  if (!limit("payments-verify", ipOf(req), 30, TEN_MIN)) return tooMany();
+  // 120, not 30: one batch records up to 50 people one call each, and helpers at one venue share an IP.
+  if (!limit("payments-verify", ipOf(req), 120, TEN_MIN)) return tooMany();
   const db = getSupabase();
   if (!db) return NextResponse.json(DB_MISSING, { status: 503 });
   let body: { claimAddress?: string; txHash?: string };

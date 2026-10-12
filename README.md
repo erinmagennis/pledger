@@ -51,8 +51,9 @@ Pledger is the third piece of one trust-driven funding stack by the same builder
 ## For judges
 
 - What is tested and how: [`docs/TESTING.md`](docs/TESTING.md). Edge cases and how each is handled: [`docs/edge-cases.md`](docs/edge-cases.md). Card payments: [`docs/card-payments.md`](docs/card-payments.md).
+- Audits run on 12 Oct 2026, with findings and what was fixed: MatchPool contract ([`docs/audit-matchpool-2026-10-12.md`](docs/audit-matchpool-2026-10-12.md), deployed bytecode matches the repo) and the payment ledger ([`docs/audit-ledger-2026-10-12.md`](docs/audit-ledger-2026-10-12.md)). No external audit yet.
 - Contract tests: `cd contracts && forge test` (40 tests, including fuzz and random-sequence invariants).
-- App tests: `cd app && npm install && npx vitest run`. Receipt checker tests: `cd verify && npm install && npx vitest run`.
+- App tests: `cd app && npm install && npx vitest run` (161 tests). Receipt checker tests: `cd verify && npm install && npx vitest run`.
 - Test pool contract on Tempo Moderato testnet: `0x02b1364d6d6a4a2a73665591d2083d25e7396a5f` ([explorer](https://explore.testnet.tempo.xyz/address/0x02b1364d6d6a4a2a73665591d2083d25e7396a5f)).
 - The design the app is built from: [`design/home-v3.png`](design/home-v3.png).
 

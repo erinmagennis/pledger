@@ -4,7 +4,7 @@ import "server-only";
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Hex } from "viem";
-import { buildLine, centsToUnits, type ClaimRecord, type LineEntry } from "./claims";
+import { buildLine, centsToUnits, type ClaimRecord, type LineEntry, type PaymentRecord } from "./claims";
 import { SENT_BEFORE, checkPaymentRule, checkUsdcPayment, dollars } from "./base";
 import { CLAIM_COLUMNS, EXTRAS_PER_ADDRESS, isMissingSchema, loadLine, readPayments } from "./claims-server";
 import { recordClaims, type RecordInput } from "./eas";
@@ -96,6 +96,8 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
       console.warn("[pledger] extra not saved", { txHash: checked.txHash, code: extra.error.code });
       return { ok: false, status: 500, error: "Could not save the payment" };
     }
+    // Someone already all paid: retry any "paid" record still pending for them (recorded ones are skipped).
+    if (allPaid(linesBefore)) later(() => attest(db, paidInputs(mineClaims, to)));
     const line = await loadLine(db).catch(() => []);
     const pid = linesBefore[0]?.pid;
     return { ok: true, amountUnits: checked.amountUnits, blockTime: checked.blockTime, entries: line.filter((e) => e.pid === pid), extra: { message: extraMessage(owed) } };
@@ -107,29 +109,34 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
     return { ok: false, status: 500, error: "Could not save the payment" };
   }
 
-  // Public record for each of this person's claims, only on the step from not-all-paid to all-paid.
+  // Public record for each of this person's claims, on the step from not-all-paid to all-paid.
   // Extras are never in `mine`'s paid amounts, so an extra can never trigger a record.
-  const mine = buildLine(mineClaims, await readPayments(db, to).catch(() => []));
-  if (!allPaid(linesBefore) && allPaid(mine)) {
-    later(() =>
-      attest(
-        db,
-        mineClaims.map((c) => ({
-          claimId: c.id,
-          fingerprint: c.fingerprint,
-          project: c.project,
-          feeCents: c.fee_cents,
-          selfBacked: c.self_backed,
-          status: "paid",
-          recipient: to,
-        })),
-      ),
-    );
+  // If the re-read fails, the payments read before plus the row just saved give the same answer.
+  let payments: PaymentRecord[];
+  try {
+    payments = await readPayments(db, to);
+  } catch {
+    console.warn("[pledger] payments re-read failed, using the saved row", { txHash: checked.txHash, to });
+    payments = [...before, { ...row(checked), kind: "paid" }];
   }
+  const mine = buildLine(mineClaims, payments);
+  if (!allPaid(linesBefore) && allPaid(mine)) later(() => attest(db, paidInputs(mineClaims, to)));
 
   const line = await loadLine(db).catch(() => []);
   return { ok: true, amountUnits: checked.amountUnits, blockTime: checked.blockTime, entries: line.filter((e) => e.pid === mine[0]?.pid) };
 }
+
+/** One "paid" record per claim of this person. */
+const paidInputs = (claims: ClaimRecord[], to: string): RecordInput[] =>
+  claims.map((c) => ({
+    claimId: c.id,
+    fingerprint: c.fingerprint,
+    project: c.project,
+    feeCents: c.fee_cents,
+    selfBacked: c.self_backed,
+    status: "paid",
+    recipient: to,
+  }));
 
 type Checked = Extract<Awaited<ReturnType<typeof checkUsdcPayment>>, { ok: true }>;
 
