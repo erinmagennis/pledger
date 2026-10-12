@@ -31,8 +31,6 @@ export default function LinePage() {
           <div className="card note sage">
             <h2>Every payment is checked</h2>
             <p>Pledger reads each USDC payment on Base before it marks anyone paid.</p>
-            <div className="mini">
-            </div>
           </div>
         </div>
       </section>
