@@ -43,6 +43,7 @@ export async function POST(req: Request) {
     return bad("Claim details are missing");
   }
   if (payload.noChargeback !== true) return bad("Confirm you have not reversed or charged back this payment");
+  if (payload.notRestrictedRegion !== true) return bad("Confirm you are not in a restricted region");
   let label: string | null;
   try {
     label = displayLabel(payload.display.mode, payload.display.name);
@@ -83,6 +84,7 @@ export async function POST(req: Request) {
     display_mode: payload.display.mode,
     display_name: label,
     no_chargeback: true,
+    not_restricted_region: true,
   }));
   const { data: stored, error } = await db.from("pledger_claims").insert(insert).select("id,fingerprint,project,fee_cents,self_backed");
   if (error) {

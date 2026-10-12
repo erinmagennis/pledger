@@ -13,7 +13,7 @@ const fpB = "b".repeat(64);
 const now = 1_760_000_000_000;
 
 function payload(over: Partial<ClaimPayload> = {}): ClaimPayload {
-  return { fingerprints: [fpB, fpA], payout: account.address, display: { mode: "initials", name: " Ana  Ortiz " }, noChargeback: true, timestamp: now, ...over };
+  return { fingerprints: [fpB, fpA], payout: account.address, display: { mode: "initials", name: " Ana  Ortiz " }, noChargeback: true, notRestrictedRegion: true, timestamp: now, ...over };
 }
 
 describe("claim signature", () => {
@@ -28,7 +28,7 @@ describe("claim signature", () => {
   it("message is canonical JSON with sorted keys", () => {
     const m = claimMessage(payload());
     expect(m.split("\n")[1]).toBe(
-      `{"display":{"mode":"initials","name":"Ana Ortiz"},"fingerprints":["${fpA}","${fpB}"],"noChargeback":true,"payout":"${account.address.toLowerCase()}","timestamp":${now}}`,
+      `{"display":{"mode":"initials","name":"Ana Ortiz"},"fingerprints":["${fpA}","${fpB}"],"noChargeback":true,"notRestrictedRegion":true,"payout":"${account.address.toLowerCase()}","timestamp":${now}}`,
     );
   });
 

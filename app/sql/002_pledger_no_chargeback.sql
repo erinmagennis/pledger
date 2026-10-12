@@ -4,3 +4,6 @@
 
 alter table public.pledger_claims
   add column if not exists no_chargeback boolean not null default false;
+
+alter table public.pledger_claims
+  add column if not exists not_restricted_region boolean not null default false;

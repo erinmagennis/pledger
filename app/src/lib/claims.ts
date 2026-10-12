@@ -190,6 +190,7 @@ export type ClaimPayload = {
   display: { mode: DisplayMode; name: string };
   /** The claimant confirms they have not reversed or charged back the payment. Must be true. */
   noChargeback: true;
+  notRestrictedRegion: true;
   timestamp: number;
 };
 
@@ -209,6 +210,7 @@ export function normalizePayload(p: ClaimPayload): ClaimPayload {
     payout: p.payout.toLowerCase(),
     display: { mode: p.display.mode, name: p.display.mode === "project" ? "" : p.display.name.replace(/\s+/g, " ").trim() },
     noChargeback: p.noChargeback,
+    notRestrictedRegion: p.notRestrictedRegion,
     timestamp: Math.floor(p.timestamp),
   };
 }
@@ -236,6 +238,7 @@ export async function checkClaimSignature(args: {
   if (!/^0x[0-9a-f]{40}$/.test(addr)) return { ok: false, reason: "bad-address" };
   if (p.payout !== addr) return { ok: false, reason: "payout-mismatch" };
   if (p.noChargeback !== true) return { ok: false, reason: "no-chargeback" };
+  if (p.notRestrictedRegion !== true) return { ok: false, reason: "restricted-region" };
   if (!/^0x[0-9a-fA-F]+$/.test(args.signature)) return { ok: false, reason: "bad-signature" };
   if (Math.abs(args.now - p.timestamp) > SIGNATURE_MAX_AGE_MS) return { ok: false, reason: "signature-expired" };
   const want = [...new Set(args.verifiedFingerprints.map((f) => f.toLowerCase()))].sort();
