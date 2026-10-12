@@ -10,11 +10,11 @@ export function SiteNav() {
       <div className="links">
         <Link href="/#live">Pledges</Link>
         <Link href="/#how">How it works</Link>
-        <Link href="/#funders">For funders</Link>
+        <Link href="/make">For funders</Link>
       </div>
       <div className="navr">
         <span className="lang"><Icon name="globe" />EN</span>
-        <Button href="/#make" size="sm">Make a pledge</Button>
+        <Button href="/make" size="sm">Make a pledge</Button>
       </div>
     </nav>
   );
