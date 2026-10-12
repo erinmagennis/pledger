@@ -14,6 +14,10 @@ export const PAYMENT_REASONS: Record<string, string> = {
   "no-usdc-transfer": "No USDC payment to this person in that transaction",
 };
 
+const ALREADY = "This payment is already recorded";
+/** Shown when one tx pays several people before sql/003_pledger_payments_per_recipient.sql has run. */
+export const NEEDS_003 = "Batch payments need the 003 update";
+
 export type RecordResult =
   | { ok: true; amountUnits: bigint; blockTime: string; entries: LineEntry[] }
   | { ok: false; status: number; error: string; duplicate?: boolean };
@@ -24,8 +28,9 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
   if (claims.error) return { ok: false, status: 500, error: "Could not load" };
   if (!claims.data?.length) return { ok: false, status: 404, error: "This address is not in line" };
 
-  const seen = await db.from("pledger_payments").select("tx_hash").eq("tx_hash", txHash.toLowerCase()).maybeSingle();
-  if (seen.data) return { ok: false, status: 409, error: "This payment is already recorded", duplicate: true };
+  // One tx can pay several people (batch payouts), so a payment is unique per (tx_hash, to_address).
+  const seen = await db.from("pledger_payments").select("tx_hash").eq("tx_hash", txHash.toLowerCase()).eq("to_address", to).maybeSingle();
+  if (seen.data) return { ok: false, status: 409, error: ALREADY, duplicate: true };
 
   const checked = await checkUsdcPayment(txHash, to);
   if (!checked.ok) return { ok: false, status: 400, error: PAYMENT_REASONS[checked.reason] ?? "Could not check that payment" };
@@ -38,7 +43,12 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
     block_time: checked.blockTime,
   });
   if (ins.error) {
-    if (ins.error.code === "23505") return { ok: false, status: 409, error: "This payment is already recorded", duplicate: true };
+    if (ins.error.code === "23505") {
+      // Same tx and person: already recorded. Same tx, other person: the old per-tx rule (before sql/003) blocked it.
+      const again = await db.from("pledger_payments").select("tx_hash").eq("tx_hash", checked.txHash).eq("to_address", checked.to).maybeSingle();
+      if (again.data) return { ok: false, status: 409, error: ALREADY, duplicate: true };
+      return { ok: false, status: 409, error: NEEDS_003 };
+    }
     return { ok: false, status: 500, error: "Could not save the payment" };
   }
 

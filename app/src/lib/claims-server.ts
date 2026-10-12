@@ -108,3 +108,12 @@ export async function payoutAddressFor(db: SupabaseClient, pid: string): Promise
   if (!data) return { error: "Unknown person", status: 404 };
   return { address: String(data.payout_address).toLowerCase() };
 }
+
+/** Full payout addresses for many people at once (pid -> address). Server only. */
+export async function payoutAddressesFor(db: SupabaseClient, pids: string[]): Promise<Map<string, string>> {
+  const ids = [...new Set(pids)].filter((p) => /^[0-9a-f-]{36}$/i.test(p));
+  if (!ids.length) return new Map();
+  const { data, error } = await db.from("pledger_claims").select("id,payout_address").in("id", ids);
+  if (error) throw new Error("db-read-failed");
+  return new Map((data ?? []).map((r: { id: string; payout_address: string }) => [r.id, String(r.payout_address).toLowerCase()]));
+}

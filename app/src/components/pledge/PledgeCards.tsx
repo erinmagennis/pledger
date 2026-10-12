@@ -100,7 +100,7 @@ export function BackersSection() {
             the line. Pledger never holds the money.
           </p>
           <div className="gb-invite-cta">
-            <Button href="/claim/line" variant="ghost">Help pay people back</Button>
+            <Button href="/claim/line#help" variant="ghost">Help pay people back</Button>
           </div>
         </article>
       </div>

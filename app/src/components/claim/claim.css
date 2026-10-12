@@ -82,3 +82,31 @@ details.cl-help ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
 .cl-cardpay{display:grid;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);padding:16px}
 .cl-onramp{min-height:420px;width:100%;max-width:520px}
 .chip.cl-test{margin-left:8px;font-size:12px;padding:2px 8px}
+
+/* help pay people back */
+.cl-help-card{scroll-margin-top:20px}
+.cl-seg{margin-top:18px}
+.cl-opts{margin-top:10px;align-items:center}
+.cl-usd{display:inline-flex;align-items:center;gap:6px;font-size:16px}
+.cl-usd .cl-input{width:110px;padding:8px 12px}
+.cl-alloc{margin-top:18px;background:var(--ground);border-radius:var(--r-sm);padding:14px 16px;display:grid;gap:10px}
+.cl-alloc-list{list-style:none;margin:0;padding:0;transition:opacity .15s ease}
+.cl-alloc-list.dim{opacity:.55}
+.cl-alloc-list li{display:grid;grid-template-columns:34px 1fr auto;gap:4px 12px;align-items:center;padding:8px 0}
+.cl-alloc-list li+li{border-top:1px solid var(--line)}
+.cl-alloc-list .n{font-family:var(--font-serif),Newsreader,Georgia,serif;font-style:italic;font-size:20px;color:var(--accent-2);line-height:1}
+.cl-alloc-list .who b{display:block;font-weight:600;font-size:15px}
+.cl-alloc-list .who small{color:var(--soft);font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.cl-alloc-list .amt{font-weight:600}
+.cl-fulladdr{list-style:none;padding:0!important;display:grid;gap:10px}
+.cl-fulladdr li{display:grid;gap:4px}
+.cl-status{display:grid;gap:8px;margin-top:12px;font-size:15px}
+.cl-status:empty{display:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* globals.css makes .who a flex row; in the line lists the name sits above its details */
+.cl-entry .who,.cl-alloc-list .who{display:block;min-width:0;color:var(--ink);font-size:inherit}
+/* mode switch reads as one segmented control, distinct from the option pills */
+.cl-choice.cl-seg{display:inline-flex;gap:0;background:var(--ground);border:1px solid var(--line);border-radius:999px;padding:4px}
+.cl-choice.cl-seg label{border:0;background:transparent;padding:8px 18px}
+.cl-choice.cl-seg label:has(input:checked){background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08),0 2px 8px -4px rgba(0,0,0,.18);font-weight:600}
+.cl-alloc>*,.cl-alloc details,.cl-fulladdr li{min-width:0}
