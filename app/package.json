@@ -10,6 +10,7 @@
     "test": "../verify/node_modules/.bin/vitest run --config vitest.config.mjs"
   },
   "dependencies": {
+    "@coinbase/wallet-sdk": "^4.4.0",
     "@ethereum-attestation-service/eas-sdk": "^2.10.0",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@supabase/supabase-js": "^2.117.3",

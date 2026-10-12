@@ -5,12 +5,19 @@ import { Icon } from "@/components/Icons";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
 import { ActivityCard, HelpCard, HowCard, InPlaceCard, WhyNoteCard } from "@/components/pledge/PledgeCards";
 import { LineCard } from "@/components/claim/LineCard";
-import { getPledge, getPledges } from "@/lib/pledges";
+import { getLineData } from "@/lib/live";
+import { getPledge, getPledges, lineStats, withLiveLine } from "@/lib/pledges";
 
 type Params = { slug: string };
 
+// Live line numbers for the give-back. Refreshed about every 30 seconds.
+export const revalidate = 30;
+
 export function generateStaticParams(): Params[] {
-  return getPledges().map((p) => ({ slug: p.slug }));
+  // test-match-pool has its own route (src/app/pledges/test-match-pool).
+  return getPledges()
+    .filter((p) => p.slug !== "test-match-pool")
+    .map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
@@ -21,9 +28,10 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
 export default async function PledgePage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
-  const pledge = getPledge(slug);
-  if (!pledge) notFound();
-  const isGiveBack = pledge.slug === "artizen-give-back";
+  const base = getPledge(slug);
+  if (!base) notFound();
+  const isGiveBack = base.slug === "artizen-give-back";
+  const pledge = isGiveBack ? withLiveLine(base, lineStats((await getLineData()).line)) : base;
 
   return (
     <>

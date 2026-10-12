@@ -79,7 +79,7 @@ export function LivePoolView({ base, initial }: { base: Pledge; initial: PoolDat
   return (
     <>
       <PledgeHeader pledge={pledge} />
-      <section className="pgrid">
+      <section className="pgrid demo">
         <div className="pcol">
           <TryIt onGiven={onGiven} />
           <div className="card">

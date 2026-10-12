@@ -17,6 +17,7 @@ const SIGNATURE_ERRORS: Record<string, string> = {
   "nothing-to-claim": "No receipts left to claim",
   "bad-signature": "The signature did not match your wallet",
   "bad-address": "Connect a wallet first",
+  "no-chargeback": "Confirm you have not reversed or charged back this payment",
 };
 
 /**
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
   } catch {
     return bad("Claim details are missing");
   }
+  if (payload.noChargeback !== true) return bad("Confirm you have not reversed or charged back this payment");
   let label: string | null;
   try {
     label = displayLabel(payload.display.mode, payload.display.name);
@@ -80,6 +82,7 @@ export async function POST(req: Request) {
     payout_address: payout,
     display_mode: payload.display.mode,
     display_name: label,
+    no_chargeback: true,
   }));
   const { data: stored, error } = await db.from("pledger_claims").insert(insert).select("id,fingerprint,project,fee_cents,self_backed");
   if (error) {

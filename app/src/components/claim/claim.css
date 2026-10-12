@@ -77,3 +77,5 @@ details.cl-help ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
  .cl-pay{margin-left:0}
  .cl-place{font-size:64px}
 }
+.cl-confirm{display:flex;align-items:flex-start;gap:10px;margin-top:14px;font-size:15px;cursor:pointer}
+.cl-confirm input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}

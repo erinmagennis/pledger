@@ -23,7 +23,7 @@ export function PledgeCard({ pledge }: { pledge: Pledge }) {
         <div className="bar"><i style={{ width: `${pledge.progress * 100}%` }} /></div>
       )}
       <div className="stats">
-        {pledge.stats.map((s) => (
+        {(pledge.cardStats ?? pledge.stats).map((s) => (
           <div key={s.label}><b>{s.value}</b><small>{s.label}</small></div>
         ))}
       </div>

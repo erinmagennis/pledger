@@ -13,7 +13,7 @@ const fpB = "b".repeat(64);
 const now = 1_760_000_000_000;
 
 function payload(over: Partial<ClaimPayload> = {}): ClaimPayload {
-  return { fingerprints: [fpB, fpA], payout: account.address, display: { mode: "initials", name: " Ana  Ortiz " }, timestamp: now, ...over };
+  return { fingerprints: [fpB, fpA], payout: account.address, display: { mode: "initials", name: " Ana  Ortiz " }, noChargeback: true, timestamp: now, ...over };
 }
 
 describe("claim signature", () => {
@@ -28,7 +28,7 @@ describe("claim signature", () => {
   it("message is canonical JSON with sorted keys", () => {
     const m = claimMessage(payload());
     expect(m.split("\n")[1]).toBe(
-      `{"display":{"mode":"initials","name":"Ana Ortiz"},"fingerprints":["${fpA}","${fpB}"],"payout":"${account.address.toLowerCase()}","timestamp":${now}}`,
+      `{"display":{"mode":"initials","name":"Ana Ortiz"},"fingerprints":["${fpA}","${fpB}"],"noChargeback":true,"payout":"${account.address.toLowerCase()}","timestamp":${now}}`,
     );
   });
 
@@ -64,6 +64,21 @@ describe("claim signature", () => {
     const signature = await account.signMessage({ message: claimMessage(p) });
     const tampered = { ...p, display: { mode: "full" as const, name: "Someone Else" } };
     const r = await checkClaimSignature({ payload: tampered, signature, address: account.address, verifiedFingerprints: [fpA, fpB], now, verify });
+    expect(r).toEqual({ ok: false, reason: "bad-signature" });
+  });
+
+  it("rejects a claim without the no-chargeback confirmation, even if signed", async () => {
+    const p = { ...payload(), noChargeback: false } as unknown as ClaimPayload;
+    const signature = await account.signMessage({ message: claimMessage(p) });
+    const r = await checkClaimSignature({ payload: p, signature, address: account.address, verifiedFingerprints: [fpA, fpB], now, verify });
+    expect(r).toEqual({ ok: false, reason: "no-chargeback" });
+  });
+
+  it("rejects a confirmation added after signing", async () => {
+    const unsigned = { ...payload() } as Partial<ClaimPayload>;
+    delete unsigned.noChargeback;
+    const signature = await account.signMessage({ message: claimMessage(unsigned as ClaimPayload) });
+    const r = await checkClaimSignature({ payload: payload(), signature, address: account.address, verifiedFingerprints: [fpA, fpB], now, verify });
     expect(r).toEqual({ ok: false, reason: "bad-signature" });
   });
 });

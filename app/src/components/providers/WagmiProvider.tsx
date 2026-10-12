@@ -14,7 +14,7 @@ function makeConfig() {
     chains: [base],
     connectors: [
       injected(),
-      // Needs @coinbase/wallet-sdk installed at runtime; the import is optional at build time.
+      // Uses @coinbase/wallet-sdk (installed).
       coinbaseWallet({ appName: "Pledger" }),
       ...(WC_PROJECT_ID ? [walletConnect({ projectId: WC_PROJECT_ID, showQrModal: true })] : []),
     ],

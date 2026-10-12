@@ -119,7 +119,7 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
 
       {phase !== "idle" && (
         <ol className="try-steps" aria-live="polite">
-          <li className={fundState}><i />{fundState === "done" && balance ? `You have ${balance} test money` : "Getting test money"}</li>
+          <li className={fundState}><i />{fundState === "done" && balance ? "Test money ready" : "Getting test money"}</li>
           <li className={givingState}><i />{giveStep === "approving" && phase === "giving" ? "Giving (step 1 of 2)" : giveStep === "donating" && phase === "giving" ? "Giving (step 2 of 2)" : "Giving"}</li>
           <li className={matchedState}><i />Matched</li>
         </ol>

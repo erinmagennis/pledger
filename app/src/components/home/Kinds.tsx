@@ -1,6 +1,6 @@
 import { Icon } from "../Icons";
 
-export function Kinds() {
+export function Kinds({ matched }: { matched: string | null }) {
   return (
     <div className="kinds">
       <div className="kind k1">
@@ -10,7 +10,7 @@ export function Kinds() {
         <div className="mini">
           <div className="r"><span>Match in place</span><span className="ok">$500</span></div>
           <div className="r"><span>In place until</span><span>31 December</span></div>
-          <div className="r"><span>Matched so far</span><span>$120</span></div>
+          {matched && <div className="r"><span>Matched so far (testnet)</span><span>{matched}</span></div>}
         </div>
       </div>
       <div className="kind k2">

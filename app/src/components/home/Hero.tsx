@@ -1,11 +1,14 @@
 import { Button } from "../Button";
 import { Icon } from "../Icons";
 import { KIND_LABEL, type Pledge } from "@/lib/pledges";
+import type { PoolData } from "@/lib/tempo";
+import { TimeAgo } from "./TimeAgo";
 
-export function Hero({ featured }: { featured: Pledge }) {
-  const [inPlace, matched, until] = featured.stats;
+/** featured = the test match pool, with live numbers merged when pool is not null. */
+export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | null }) {
   const progress = featured.progress ?? 0;
-  const left = featured.inPlace.find((r) => r.label === "Left to match")?.value;
+  const latest = pool?.events.find((e) => e.kind === "donated");
+  const matched = latest && latest.match && latest.match !== "$0";
   return (
     <header className="hero">
       <div>
@@ -19,19 +22,32 @@ export function Hero({ featured }: { featured: Pledge }) {
       </div>
       <div className="stage">
         <div className="artslot">Hero art (Higgsfield)</div>
-        {/* TODO(data): latest verified payment */}
-        <div className="float f2">
-          <span className="ic"><Icon name="check" /></span>
-          <div><b>$25 sent to M. R.</b><small>2 hours ago · checked</small></div>
-        </div>
+        {latest && pool && (
+          <div className="float f2">
+            <span className="ic"><Icon name="check" /></span>
+            <div>
+              <b>{matched ? `${latest.match} matched on testnet` : `${latest.amount} given on testnet`}</b>
+              <small><TimeAgo unix={latest.time} renderedAt={pool.fetchedAt} /> · checked</small>
+            </div>
+          </div>
+        )}
         <div className="float f1">
           <div className="row">
             <span className="t">{featured.title}</span>
             <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span>
           </div>
-          <div className="amt">{inPlace.value} <span>{until.label} {until.value}</span></div>
-          <div className="bar"><i style={{ width: `${progress * 100}%` }} /></div>
-          <div className="meta"><span>{matched.value} matched</span>{left && <span>{left} left</span>}</div>
+          {pool ? (
+            <>
+              <div className="amt">{pool.pool} <span>left to match</span></div>
+              <div className="bar"><i style={{ width: `${progress * 100}%` }} /></div>
+              <div className="meta"><span>{pool.totalMatched} matched</span><span>until 31 Dec</span></div>
+            </>
+          ) : (
+            <>
+              <div className="amt">$500 <span>put in place</span></div>
+              <div className="meta"><span>1:1 match, up to $20</span><span>until 31 Dec</span></div>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -1,7 +1,7 @@
 // Server-only claim pipeline: verify uploaded .eml files, pair self-backing, mark duplicates.
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildLine, friendlyReason, markUnclaimable, parseExcludedHashes, toCents, MAX_FILES, type ClaimRecord, type PaymentRecord, type ReviewRow } from "./claims";
+import { buildLine, friendlyReason, markUnclaimable, parseExcludedHashes, toCents, MAX_FILES, type ClaimRecord, type LineEntry, type PaymentRecord, type ReviewRow } from "./claims";
 import { verifyArtizenEmail, pairSelfBacked, MAX_BYTES, type Result as VerifyResult } from "./verify";
 
 export const sha256Hex = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -85,11 +85,17 @@ export function publicRow(r: CheckedRow): ReviewRow {
 
 export const CLAIM_COLUMNS = "id,fingerprint,project,purchased_at,fee_cents,self_backed,payout_address,display_mode,display_name,created_at";
 
-export async function loadLine(db: SupabaseClient) {
+/** The line plus the raw payments it was built from (the home tracker sums them). */
+export async function loadLineData(db: SupabaseClient): Promise<{ line: LineEntry[]; payments: PaymentRecord[] }> {
   const [claims, payments] = await Promise.all([
     db.from("pledger_claims").select(CLAIM_COLUMNS).order("created_at", { ascending: true }),
     db.from("pledger_payments").select("tx_hash,to_address,amount_units,block_time"),
   ]);
   if (claims.error || payments.error) throw new Error("db-read-failed");
-  return buildLine((claims.data ?? []) as ClaimRecord[], (payments.data ?? []) as PaymentRecord[]);
+  const pays = (payments.data ?? []) as PaymentRecord[];
+  return { line: buildLine((claims.data ?? []) as ClaimRecord[], pays), payments: pays };
+}
+
+export async function loadLine(db: SupabaseClient) {
+  return (await loadLineData(db)).line;
 }

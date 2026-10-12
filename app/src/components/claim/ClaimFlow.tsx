@@ -44,6 +44,7 @@ export function ClaimFlow() {
   const [dragOn, setDragOn] = useState(false);
   const [mode, setMode] = useState<DisplayMode>("initials");
   const [name, setName] = useState("");
+  const [noChargeback, setNoChargeback] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);
@@ -53,7 +54,7 @@ export function ClaimFlow() {
   const claimable = rows?.filter((r) => r.ok && r.kind === "receipt" && r.fingerprint) ?? [];
   const needsName = mode !== "project";
   const wrongChain = isConnected && chainId !== base.id;
-  const canSubmit = isConnected && !wrongChain && claimable.length > 0 && (!needsName || name.trim().length > 0) && !sending;
+  const canSubmit = isConnected && !wrongChain && claimable.length > 0 && (!needsName || name.trim().length > 0) && noChargeback && !sending;
 
   async function addFiles(list: FileList | File[]) {
     const incoming = Array.from(list).filter((f) => f.name.toLowerCase().endsWith(".eml") || f.type === "message/rfc822");
@@ -96,6 +97,7 @@ export function ClaimFlow() {
         fingerprints: claimable.map((r) => r.fingerprint!),
         payout: address,
         display: { mode, name: needsName ? name : "" },
+        noChargeback: true as const,
         timestamp: Date.now(),
       };
       const signature = await sign.mutateAsync({ message: claimMessage(payload) });
@@ -244,6 +246,10 @@ export function ClaimFlow() {
           <span className="k"><b>5</b>Sign</span>
           <h2>Sign and send</h2>
           <p className="cl-soft">Your wallet signs a message with your receipts and payout address. No fee, no transaction.</p>
+          <label className="cl-confirm">
+            <input type="checkbox" checked={noChargeback} onChange={(e) => setNoChargeback(e.target.checked)} required />
+            I haven&apos;t reversed or charged back this payment.
+          </label>
           {error && <p className="cl-error">{error}</p>}
           <div className="cl-row">
             <button className="btn btn-primary" disabled={!canSubmit} onClick={submit}>
@@ -252,6 +258,7 @@ export function ClaimFlow() {
             </button>
             {!isConnected && <span className="cl-soft">Connect a wallet first.</span>}
             {isConnected && needsName && !name.trim() && <span className="cl-soft">Add a name, or choose project only.</span>}
+            {isConnected && (!needsName || name.trim()) && !noChargeback && <span className="cl-soft">Tick the box above to sign.</span>}
           </div>
         </div>
       )}

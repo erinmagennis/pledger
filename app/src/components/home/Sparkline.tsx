@@ -1,10 +1,17 @@
-/** Area sparkline from home-v3. Points are scaled into a 300x90 box. */
-export function Sparkline({ series }: { series: number[] }) {
+/** Area sparkline from home-v3. Points are scaled into a 300x90 box. flat = a baseline only, no curve. */
+export function Sparkline({ series, flat }: { series: number[]; flat?: boolean }) {
+  if (flat || series.length < 2) {
+    return (
+      <svg className="spark flat" viewBox="0 0 300 10" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 5 L300 5" fill="none" stroke="#5f8a66" strokeWidth="2" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" />
+      </svg>
+    );
+  }
   const max = Math.max(...series, 1);
-  const step = series.length > 1 ? 300 / (series.length - 1) : 300;
+  const step = 300 / (series.length - 1);
   const pts = series.map((v, i) => [Math.round(i * step), Math.round(90 - (v / max) * 82)] as const);
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ");
-  const last = pts[pts.length - 1];
+  const last = pts[pts.length - 1]!;
   return (
     <svg className="spark" viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true">
       <defs>

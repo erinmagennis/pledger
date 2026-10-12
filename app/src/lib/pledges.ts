@@ -1,8 +1,8 @@
-// Pledge data for the app.
-// TODO(data): everything here is SAMPLE DATA copied from design/home-v3.html,
-// except test-match-pool, which is live from Tempo testnet (withLivePool).
-// Wire to Tempo (MatchPool contract reads) and Supabase (claims, activity log)
-// before launch. Keep the exported types stable so pages do not change.
+// Pledge data for the app. Static facts live here; live numbers are merged in:
+// test-match-pool from Tempo testnet (withLivePool), artizen-give-back from the
+// Supabase line (withLiveLine), and the home tracker from both (computeTotals).
+// Pure: no server imports, safe for client components and tests.
+import { formatCents, NEXT_UPDATE, type LineEntry, type PaymentRecord } from "./claims";
 
 export type PledgeKind = "matching" | "prize" | "give-back";
 export type Chain = "Tempo testnet" | "Base";
@@ -17,8 +17,10 @@ export type Pledge = {
   title: string;
   by: { name: string; initials: string };
   chain: Chain;
-  /** Short stats for cards and the pledge header (2 or 3). */
+  /** Short stats for the pledge header, and for cards when cardStats is not set (2 or 3). */
   stats: Stat[];
+  /** Stats for the home page card, when they differ from the header. */
+  cardStats?: Stat[];
   /** 0 to 1, drives the progress bar. Omit to hide the bar. */
   progress?: number;
   inPlace: InPlaceRow[];
@@ -32,6 +34,51 @@ export const KIND_LABEL: Record<PledgeKind, string> = {
   prize: "Prize",
   "give-back": "Give-back",
 };
+
+/** "20 October 2026" to "20 Oct". */
+export function shortDate(long: string): string {
+  const [day, month] = long.split(" ");
+  return day && month ? `${day} ${month.slice(0, 3)}` : long;
+}
+
+export type LineStats = { people: number; feesCents: number; paidCents: number };
+
+/** People in line (unique payout addresses), fees claimed and paid from the line. */
+export function lineStats(line: LineEntry[]): LineStats {
+  return {
+    people: new Set(line.map((e) => e.pid)).size,
+    feesCents: line.reduce((s, e) => s + e.feeCents, 0),
+    paidCents: line.reduce((s, e) => s + e.paidCents, 0),
+  };
+}
+
+function lineFields(st: LineStats): Pick<Pledge, "stats" | "cardStats" | "inPlace"> {
+  return {
+    stats: [
+      { value: String(st.people), label: "in line" },
+      { value: formatCents(st.feesCents), label: "fees claimed" },
+      { value: shortDate(NEXT_UPDATE), label: "next update" },
+    ],
+    cardStats: [
+      { value: String(st.people), label: "in line" },
+      { value: formatCents(st.feesCents), label: "fees claimed" },
+      { value: formatCents(st.paidCents), label: "paid from the line" },
+    ],
+    inPlace: [
+      { label: "Share pledged", value: "50% of Colosseum winnings", ok: true },
+      { label: "Who can claim", value: "People who paid the 10% fee" },
+      { label: "People in line", value: String(st.people) },
+      { label: "Fees claimed", value: formatCents(st.feesCents) },
+      { label: "Paid from the line", value: formatCents(st.paidCents) },
+      { label: "Chain", value: "Base" },
+    ],
+  };
+}
+
+/** Merge the live line into the Artizen give-back pledge. */
+export function withLiveLine(pledge: Pledge, st: LineStats): Pledge {
+  return { ...pledge, ...lineFields(st) };
+}
 
 const pledges: Pledge[] = [
   {
@@ -68,17 +115,8 @@ const pledges: Pledge[] = [
     title: "Get your Artizen 10% back",
     by: { name: "Erin Magennis", initials: "EM" },
     chain: "Base",
-    stats: [
-      { value: "50%", label: "of her winnings" },
-      { value: "41", label: "in line" },
-      { value: "20 Oct", label: "next update" },
-    ],
-    inPlace: [
-      { label: "Share pledged", value: "50% of Colosseum winnings", ok: true },
-      { label: "Who can claim", value: "People who paid the 10% fee" },
-      { label: "Claims in line", value: "41" },
-      { label: "Chain", value: "Base" },
-    ],
+    // Zeros until withLiveLine() merges the real line (also the fallback when the database is not connected).
+    ...lineFields({ people: 0, feesCents: 0, paidCents: 0 }),
     activity: [
       { date: "12 Oct 2026", text: "Claims open" },
       { date: "11 Oct 2026", text: "Pledge made: 50% of winnings" },
@@ -156,31 +194,79 @@ export function getPledge(slug: string): Pledge | undefined {
   return pledges.find((p) => p.slug === slug);
 }
 
-export type Totals = {
-  paidOut: number;
-  peoplePaid: number;
-  byKind: { kind: PledgeKind; label: string; amount: number }[];
-  /** Cumulative payout points for the sparkline, oldest first. */
-  series: number[];
-  recentPeople: string[];
-};
-
-// TODO(data): sample numbers from the design. Replace with sums of verified
-// payments from Tempo + Base (via Supabase index).
-export function getTotals(): Totals {
-  return {
-    paidOut: 2340,
-    peoplePaid: 31,
-    byKind: [
-      { kind: "matching", label: "Matching", amount: 1170 },
-      { kind: "prize", label: "Prizes", amount: 700 },
-      { kind: "give-back", label: "Give-backs", amount: 470 },
-    ],
-    series: [4, 6, 10, 12, 20, 24, 38, 44, 60, 68, 82],
-    recentPeople: ["MR", "AO", "TP"],
-  };
-}
-
 export function formatUsd(n: number): string {
   return "$" + n.toLocaleString("en-US");
 }
+
+// ---------- home tracker ----------
+
+export type Totals = {
+  /** Real Base mainnet payments recorded for the give-back (pledger_payments). */
+  paidCents: number;
+  /** Testnet sends in the demo: donated plus matched. */
+  testnetCents: number;
+  byKind: { kind: PledgeKind; label: string; cents: number }[];
+  /** Cumulative cents by day, oldest first. Flat when there are fewer than 2 days. */
+  series: number[];
+  flat: boolean;
+  /** Initials for the most recent people in line (max 3). */
+  people: string[];
+  peopleCount: number;
+};
+
+/** Minimal shape of the pool data the tracker needs (see PoolData in tempo.ts). */
+export type PoolTotals = {
+  donatedUnits: string;
+  matchedUnits: string;
+  events: { kind: "donated" | "deposited"; time: number; amountUnits: string; matchUnits?: string }[];
+};
+
+const unitsCents = (u: string | number | undefined) => Number(BigInt(String(u ?? "0").split(".")[0] || "0") / 10_000n);
+
+/** "Ana Ortiz" or "A. O." to "AO"; a project name works the same way. */
+export function avatarInitials(label: string): string {
+  const letters = label
+    .split(/[\s.,]+/)
+    .filter((w) => /[\p{L}\p{N}]/u.test(w))
+    .map((w) => w.match(/[\p{L}\p{N}]/u)![0]!.toUpperCase());
+  return letters.slice(0, 2).join("") || "?";
+}
+
+export function computeTotals(pool: PoolTotals | null, line: LineEntry[], payments: PaymentRecord[]): Totals {
+  const paidCents = payments.reduce((s, p) => s + unitsCents(p.amount_units), 0);
+  const testnetCents = pool ? unitsCents(pool.donatedUnits) + unitsCents(pool.matchedUnits) : 0;
+
+  const byDay = new Map<string, number>();
+  const add = (iso: string, cents: number) => {
+    const day = iso.slice(0, 10);
+    byDay.set(day, (byDay.get(day) ?? 0) + cents);
+  };
+  for (const p of payments) add(new Date(p.block_time).toISOString(), unitsCents(p.amount_units));
+  for (const e of pool?.events ?? []) {
+    if (e.kind === "donated") add(new Date(e.time * 1000).toISOString(), unitsCents(e.amountUnits) + unitsCents(e.matchUnits));
+  }
+  const days = [...byDay.keys()].sort();
+  let run = 0;
+  const cumulative = days.map((d) => (run += byDay.get(d)!));
+  const flat = cumulative.length < 2;
+
+  const recent = new Map<string, { at: string; label: string }>();
+  for (const e of line) {
+    const cur = recent.get(e.pid);
+    if (!cur || e.firstAt > cur.at) recent.set(e.pid, { at: e.firstAt, label: e.label });
+  }
+  const people = [...recent.values()]
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, 3)
+    .map((p) => avatarInitials(p.label));
+
+  const byKind = (
+    [
+      { kind: "matching", label: "Matching (testnet)", cents: testnetCents },
+      { kind: "give-back", label: "Give-backs", cents: paidCents },
+    ] as Totals["byKind"]
+  ).filter((k) => k.cents > 0);
+
+  return { paidCents, testnetCents, byKind, series: flat ? [0, 0] : cumulative, flat, people, peopleCount: recent.size };
+}
+
