@@ -1,5 +1,3 @@
-import { Button } from "../Button";
-import { Icon } from "../Icons";
 import type { Pledge } from "@/lib/pledges";
 
 export function InPlaceCard({ pledge }: { pledge: Pledge }) {
@@ -51,26 +49,56 @@ export function HowCard({ pledge }: { pledge: Pledge }) {
   );
 }
 
-// TODO(copy): placeholder copy for the Artizen give-back. Erin to replace with her own words.
-export function WhyNoteCard() {
+// TODO(copy): placeholder note for the Artizen give-back. Erin to replace with her own words.
+/** Erin's note on the give-back page. A quiet strip, not a card. */
+export function GiveBackNote() {
   return (
-    <div className="card note">
-      <span className="ico"><Icon name="heart" /></span>
-      <h2>Why I&apos;m doing this</h2>
-      <p>The 10% fee came out of your support for builders. If I win, half of it goes back to you.</p>
-    </div>
+    <section className="pnote" aria-labelledby="pnote-h">
+      <span className="av tone-give-back">EM</span>
+      <div>
+        <h2 id="pnote-h" className="pnote-k">Why I&apos;m doing this</h2>
+        <p>
+          The 10% fee came out of money you put behind builders, me included. If I win at Colosseum,
+          half of it comes back to you. Self-backers go first because they paid the fee on their own work.
+        </p>
+        <p className="sig">Erin</p>
+      </div>
+    </section>
   );
 }
 
-export function HelpCard() {
+/** How it works (left) and the facts plus dated activity (right). Plain section with a hairline on top. */
+export function HowProof({ pledge }: { pledge: Pledge }) {
+  const facts = [
+    { label: "Share pledged", value: "50% of Colosseum winnings" },
+    { label: "Who can claim", value: "People who paid the 10% fee" },
+    { label: "Chain", value: pledge.chain },
+    { label: "Records", value: `On ${pledge.chain} via EAS` },
+  ];
   return (
-    <div className="card note sage">
-      <span className="ico"><Icon name="undo" /></span>
-      <h2>Want to help? Pay someone in line directly</h2>
-      <p>Send USDC on Base to anyone waiting. Pledger checks each payment and updates the line.</p>
-      <div className="ctas" style={{ marginTop: 18 }}>
-        <Button href="/claim/line" variant="ghost">Pay someone in line</Button>
+    <section className="hproof" aria-labelledby="hproof-h">
+      <h2 id="hproof-h">How it works and proof</h2>
+      <div className="hproof-grid">
+        <ol className="how">
+          {pledge.howItWorks.map((h, i) => <li key={i}>{h}</li>)}
+        </ol>
+        <div>
+          <dl className="facts">
+            {facts.map((f) => (
+              <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+            ))}
+          </dl>
+          <ol className="log">
+            {pledge.activity.map((a, i) => (
+              <li key={i}>
+                <time>{a.date}</time>
+                <span>{a.text}</span>
+                {a.amount ? <b>{a.amount}</b> : <span />}
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

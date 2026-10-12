@@ -1,18 +1,31 @@
 "use client";
 
-// Live line for the Artizen give-back pledge page. Top 20, then a link to the full line.
+// Live line for the Artizen give-back pledge page: three numbers, then the top 20 and a link to the full line.
 import "./claim.css";
 import Link from "next/link";
 import { Icon } from "@/components/Icons";
+import { formatCents } from "@/lib/claims";
+import { lineStats, type LineStats } from "@/lib/pledges";
 import { LineList, useLine } from "./LineList";
 
-export function LineCard() {
+/** `initial` is the server's count, shown until the live line loads. */
+export function LineCard({ initial }: { initial?: LineStats }) {
   const { line, loaded } = useLine();
+  const st = loaded ? lineStats(line) : initial ?? { people: 0, feesCents: 0, paidCents: 0 };
   return (
-    <div className="card">
-      <span className="k"><span className="live" />Live</span>
-      <h2 style={{ marginTop: 8 }}>The line</h2>
-      <p className="cl-soft" style={{ marginTop: 6 }}>Self-backed claims first, smallest first. Then everyone else, smallest first.</p>
+    <div className="card linecard">
+      <div className="lc-top">
+        <div>
+          <span className="k"><span className="live" />Live</span>
+          <h2 style={{ marginTop: 8 }}>The line</h2>
+          <p className="cl-soft" style={{ marginTop: 6 }}>Self-backed claims first, smallest first. Then everyone else, smallest first.</p>
+        </div>
+        <dl className="lc-stats">
+          <div><dt>in line</dt><dd>{st.people}</dd></div>
+          <div><dt>fees claimed</dt><dd>{formatCents(st.feesCents)}</dd></div>
+          <div><dt>paid so far</dt><dd>{formatCents(st.paidCents)}</dd></div>
+        </dl>
+      </div>
       <LineList entries={line.slice(0, 20)} loaded={loaded} />
       <div className="cl-more">
         <Link className="go" href="/claim/line">

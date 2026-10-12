@@ -216,3 +216,36 @@ svg.i.sm{width:14px;height:14px}
 .phead .phfloat small{display:block}
 @media(min-width:901px){.pgrid.demo .pcol.side{position:sticky;top:24px}}
 @media(max-width:900px){.phead .phfloat{display:none}}
+
+/* give-back page: two doors, line first, quiet note and proof */
+.phead .psub{font-size:19px;color:var(--soft);margin-top:18px;max-width:46ch}
+.doors{display:flex;gap:28px;margin-top:32px;flex-wrap:wrap}
+.door{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.door-k{font-size:14px;font-weight:600;color:var(--soft)}
+.linecard .lc-top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px 40px;flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.lc-stats{display:flex;gap:36px;margin:0}
+.lc-stats div{display:flex;flex-direction:column-reverse}
+.lc-stats dd{margin:0;font-size:30px;font-weight:600;letter-spacing:-.025em;line-height:1.1}
+.lc-stats dt{font-size:13px;color:var(--soft)}
+.pnote{display:grid;grid-template-columns:44px 1fr;gap:18px;max-width:640px;margin:0 auto;padding:88px 0 80px}
+.pnote .av{width:44px;height:44px;font-size:14px;margin:0}
+.pnote-k{font-size:14px;font-weight:600;color:var(--soft);letter-spacing:0}
+.pnote p{font-size:19px;line-height:1.6;margin-top:8px}
+.pnote .sig{font-family:var(--font-serif),Newsreader,Georgia,serif;font-style:italic;font-size:24px;margin-top:14px;color:var(--accent)}
+.hproof{border-top:1px solid var(--line);padding-top:44px}
+.hproof h2{font-size:22px;font-weight:600;letter-spacing:-.015em}
+.hproof-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:8px}
+.facts{margin:14px 0 0;font-size:15px}
+.facts div{display:flex;justify-content:space-between;gap:16px;padding:10px 0}
+.facts div+div{border-top:1px solid var(--line)}
+.facts dt{color:var(--soft)}
+.facts dd{margin:0;text-align:right;font-weight:600}
+.hproof .how{align-content:start;margin-top:22px}
+.hproof .log{margin-top:18px;border-top:1px solid var(--line)}
+@media(max-width:900px){
+ .doors{flex-direction:column;gap:20px}
+ .lc-stats{gap:24px;width:100%}.lc-stats dd{font-size:24px}
+ .pnote{padding:64px 4px 56px;grid-template-columns:36px 1fr;gap:14px}.pnote .av{width:36px;height:36px;font-size:12px}
+ .pnote p{font-size:17px}
+ .hproof-grid{grid-template-columns:1fr;gap:28px}
+}
