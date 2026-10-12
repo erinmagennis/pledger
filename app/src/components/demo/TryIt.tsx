@@ -6,7 +6,7 @@ import { Icon } from "../Icons";
 import { RECIPIENT_LABEL, txUrl, usd } from "@/lib/tempo";
 import type { GiveResult } from "./give";
 
-const KEY_STORE = "pledger-demo-key";
+const KEY_STORE = "pledger_demo_key";
 const AMOUNTS = [5, 10, 20] as const;
 const ENOUGH = 20_000_000n; // $20 in 6-decimal units
 
