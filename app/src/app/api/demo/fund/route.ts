@@ -6,7 +6,7 @@
 // pledger_faucet_log so it holds across instances. Before 006 runs, only the in-memory limit applies.
 import { NextResponse, type NextRequest } from "next/server";
 import { getAddress, isAddress, type Address } from "viem";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { isMissingSchema } from "@/lib/claims-server";
 import { getSupabase } from "@/lib/supabase";
 import { TEMPO_RPC, alphaBalance, usd } from "@/lib/tempo";
@@ -23,6 +23,14 @@ function clientIp(req: NextRequest): string {
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "local";
+}
+
+/** The stored stand-in for an IP. IPv4 has only about 4 billion values, so a plain sha256 can be reversed by
+ * trying them all; a keyed HMAC with a server-only pepper cannot. Without PLEDGER_PEPPER set, plain sha256
+ * keeps the demo working (the cap still counts) at that weaker level. */
+function hashIp(ip: string): string {
+  const pepper = process.env.PLEDGER_PEPPER;
+  return pepper ? createHmac("sha256", pepper).update(ip).digest("hex") : createHash("sha256").update(ip).digest("hex");
 }
 
 function fail(status: number, error: string) {
@@ -105,7 +113,7 @@ export async function POST(req: NextRequest) {
   ipHits.set(ip, hits);
   fundedAddresses.add(key);
   if (db && logging) {
-    const ipHash = createHash("sha256").update(ip).digest("hex");
+    const ipHash = hashIp(ip);
     const ins = await db.from("pledger_faucet_log").insert({ ip_hash: ipHash, address: key });
     if (ins.error && !isMissingSchema(ins.error)) console.warn("[pledger] faucet log write failed", { code: ins.error.code });
   }

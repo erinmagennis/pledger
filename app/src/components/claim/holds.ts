@@ -13,11 +13,18 @@ let version = 0;
 
 export type HoldAnswer = { held: boolean; until?: string };
 
-/** Hold people for 10 minutes (or refresh their hold). Never throws. held: false before sql/005 or on any error. */
-export async function hold(pids: string[], source: HoldSource): Promise<HoldAnswer> {
-  // The server holds up to 10 people per request (and per IP); a bigger split holds its first 10.
-  const ids = [...new Set(pids)].filter(Boolean).slice(0, 10);
-  if (!ids.length) return { held: false };
+/** The server holds up to this many people per request. */
+export const HOLD_CHUNK = 10;
+
+/** Split into groups of `size`, in order. */
+export function chunk<T>(list: T[], size = HOLD_CHUNK): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+/** Hold one group of up to HOLD_CHUNK people. Never throws. */
+async function holdChunk(ids: string[], source: HoldSource): Promise<HoldAnswer> {
   try {
     const res = await fetch("/api/line/hold", {
       method: "POST",
@@ -34,6 +41,19 @@ export async function hold(pids: string[], source: HoldSource): Promise<HoldAnsw
   } catch {
     return { held: false };
   }
+}
+
+/** Hold people for 10 minutes (or refresh their hold). Never throws. held: false before sql/005 or on any error.
+ * A bigger split is held in groups of HOLD_CHUNK, one request each; held is true when any group was held. */
+export async function hold(pids: string[], source: HoldSource): Promise<HoldAnswer> {
+  const ids = [...new Set(pids)].filter(Boolean);
+  if (!ids.length) return { held: false };
+  let first: HoldAnswer = { held: false };
+  for (const group of chunk(ids)) {
+    const r = await holdChunk(group, source);
+    if (r.held && !first.held) first = r;
+  }
+  return first;
 }
 
 /** True while this browser holds the person. */
@@ -143,3 +163,77 @@ export const forgetSent = (ids: string[]) => {
  * or a 409 (already recorded is handled as done before this; the 003 answer clears once sql/003 runs).
  * Anything else is the rule saying no, for good. */
 export const worthRetrying = (status: number, error: string) => status >= 500 || status === 429 || status === 409 || /not found/i.test(error);
+
+// ---------- Batches this browser sent, before Base answered ----------
+// A wallet batch (EIP-5792) has no tx hashes until Base confirms it. The batch id and its split are kept from the
+// moment the wallet returns the id, so a closed tab or a timeout does not lose a payment that may be on its way.
+// Once the hashes are known they move to the sent list above, and the batch is forgotten here.
+// Every write re-reads storage first, so two tabs add and remove their own batches without dropping each other's.
+
+export const CALLS_KEY = "pledger.calls";
+const CALLS_MAX = 20;
+
+/** One person's share of a batch, as the split showed it. */
+export type BatchTransfer = { pid: string; address: string; shortAddress: string; label: string; places: number[]; amountUnits: string; amountCents: number };
+export type SentCalls = { id: string; list: BatchTransfer[]; at: number };
+
+const isTransfer = (x: unknown): x is BatchTransfer => {
+  const t = x as BatchTransfer;
+  return (
+    !!t &&
+    typeof t.pid === "string" &&
+    typeof t.address === "string" &&
+    typeof t.shortAddress === "string" &&
+    typeof t.label === "string" &&
+    Array.isArray(t.places) &&
+    typeof t.amountUnits === "string" &&
+    /^[0-9]+$/.test(t.amountUnits) &&
+    typeof t.amountCents === "number"
+  );
+};
+
+const isCalls = (x: unknown): x is SentCalls => {
+  const c = x as SentCalls;
+  return !!c && typeof c.id === "string" && !!c.id && typeof c.at === "number" && Array.isArray(c.list) && c.list.length > 0 && c.list.every(isTransfer);
+};
+
+/** Read the stored batches. Anything malformed or older than SENT_MAX_AGE is left out. */
+export function parseCalls(raw: string | null, now = Date.now()): SentCalls[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw) as unknown;
+    return Array.isArray(v) ? v.filter(isCalls).filter((c) => now - c.at < SENT_MAX_AGE) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Add a batch, replacing one with the same id. Keeps the newest CALLS_MAX. */
+export const addCalls = (list: SentCalls[], item: SentCalls): SentCalls[] => [...list.filter((c) => c.id !== item.id), item].slice(-CALLS_MAX);
+
+/** Drop the given batch id and anything too old. */
+export const pruneCalls = (list: SentCalls[], id: string, now = Date.now()): SentCalls[] => list.filter((c) => c.id !== id && now - c.at < SENT_MAX_AGE);
+
+function readCalls(): SentCalls[] {
+  try {
+    return parseCalls(window.localStorage.getItem(CALLS_KEY));
+  } catch {
+    return [];
+  }
+}
+
+function writeCalls(list: SentCalls[]) {
+  try {
+    if (list.length) window.localStorage.setItem(CALLS_KEY, JSON.stringify(list));
+    else window.localStorage.removeItem(CALLS_KEY);
+  } catch {
+    // storage blocked: the in-page "Check again" still works for this visit
+  }
+}
+
+/** Batches sent on this browser whose hashes are not known yet. */
+export const loadCalls = () => readCalls();
+
+export const rememberCalls = (item: SentCalls) => writeCalls(addCalls(readCalls(), item));
+
+export const forgetCalls = (id: string) => writeCalls(pruneCalls(readCalls(), id));

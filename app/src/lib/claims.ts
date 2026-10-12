@@ -81,6 +81,12 @@ export type LineEntry = {
   heldUntil?: string;
   /** Extras sent to this person, on their first place only. */
   extras?: LineExtra[];
+  /** Shortfall forgiven by the payment rule (within 0.9%, at most $1.00, counts as paid), in cents; 0 when none. */
+  forgivenCents?: number;
+  /** Latest recorded public record (EAS uid) across this entry's claims, or null. */
+  recordUid?: string | null;
+  /** From pledger_claims.record_state: "pending" if any claim waits for its record, "recorded" if all have one. */
+  recordState?: "pending" | "recorded" | null;
 };
 
 // ---------- reasons ----------
@@ -303,35 +309,71 @@ export function shortAddress(a: string): string {
 export const paymentUnits = (u: string | number) => BigInt(String(u).split(".")[0] || "0");
 
 /**
- * Fill one person's entries, in line order, from everything they have been paid, in USDC units.
- * The payment rule accepts down to 99.5% of what is owed, so the shortfall is forgiven, never carried:
- * when the person's total reaches 99.5% of all their fees, every entry is paid in full; otherwise an
- * entry reaching 99.5% of its own fee is paid in full, and the first one below that takes all that is left.
+ * Fill one person's claims, in claim-time order, from everything they have been paid, in USDC units.
+ * The payment rule accepts a payment within 0.9% of what is owed either way, capped at $1.00 (allowanceUnits),
+ * so a shortfall inside that is forgiven, never carried: when the person's total is within the allowance of all
+ * their fees, every claim is paid in full; otherwise a claim within the allowance of its own fee is paid in
+ * full, and the first one short of that takes all that is left.
+ * `forgivenCents` is the shortfall closed on a claim paid in full (0 when none).
  */
-export function fillPerson(feesCents: number[], paidUnits: bigint): { paidCents: number; status: LineStatus }[] {
-  const ok = (paid: bigint, feeCents: number) => feeCents > 0 && paid > 0n && paid * 1000n >= centsToUnits(feeCents) * 995n;
-  if (ok(paidUnits, feesCents.reduce((s, f) => s + Math.max(0, f), 0))) {
-    return feesCents.map((f) => (f > 0 ? { paidCents: f, status: "paid" } : { paidCents: 0, status: "waiting" }));
+export function fillPerson(feesCents: number[], paidUnits: bigint): { paidCents: number; status: LineStatus; forgivenCents: number }[] {
+  const ok = (paid: bigint, feeCents: number) => {
+    const fee = centsToUnits(feeCents);
+    return feeCents > 0 && paid > 0n && paid >= fee - allowanceUnits(fee);
+  };
+  // Shortfall in whole cents, rounded up so the forgiven amount plus what arrived is never short of the fee.
+  const short = (feeCents: number, paid: bigint) => {
+    const gap = centsToUnits(feeCents) - paid;
+    return gap > 0n ? Number((gap + 9_999n) / 10_000n) : 0;
+  };
+  const total = feesCents.reduce((s, f) => s + Math.max(0, f), 0);
+  if (ok(paidUnits, total)) {
+    // The whole-person shortfall lands on the last claims first (the earlier ones were paid in order).
+    let gap = short(total, paidUnits);
+    const out = feesCents.map((f) => (f > 0 ? { paidCents: f, status: "paid" as LineStatus, forgivenCents: 0 } : { paidCents: 0, status: "waiting" as LineStatus, forgivenCents: 0 }));
+    for (let i = out.length - 1; i >= 0 && gap > 0; i--) {
+      const take = Math.min(gap, Math.max(0, feesCents[i]!));
+      out[i]!.forgivenCents = take;
+      gap -= take;
+    }
+    return out;
   }
   let left = paidUnits;
   return feesCents.map((f) => {
-    if (f <= 0 || left <= 0n) return { paidCents: 0, status: "waiting" };
+    if (f <= 0 || left <= 0n) return { paidCents: 0, status: "waiting", forgivenCents: 0 };
     const feeUnits = centsToUnits(f);
     if (ok(left, f)) {
+      const forgivenCents = short(f, left);
       left = left > feeUnits ? left - feeUnits : 0n;
-      return { paidCents: f, status: "paid" };
+      return { paidCents: f, status: "paid", forgivenCents };
     }
     const paidCents = unitsToCents(left);
     left = 0n;
-    return { paidCents, status: paidCents > 0 ? "partial" : "waiting" };
+    return { paidCents, status: paidCents > 0 ? "partial" : "waiting", forgivenCents: 0 };
   });
+}
+
+/** Most the payment rule allows either way: $1.00 in USDC units. */
+export const MAX_ALLOWANCE_UNITS = 5_000_000n;
+
+/** How far a payment may be from what is owed and still count as paid in full, either way:
+ * 0.9% of what is owed, capped at $1.00. The payment rule (base.ts) and forgiveness here both use it. */
+export function allowanceUnits(owedUnits: bigint): bigint {
+  if (owedUnits <= 0n) return 0n;
+  const pct = (owedUnits * 9n) / 1000n;
+  return pct < MAX_ALLOWANCE_UNITS ? pct : MAX_ALLOWANCE_UNITS;
+}
+
+/** Claims oldest first (ties by id): the order payments fill them. */
+export function byClaimTime<T extends { created_at: string; id: string }>(claims: T[]): T[] {
+  return [...claims].sort((x, y) => (x.created_at !== y.created_at ? (x.created_at < y.created_at ? -1 : 1) : x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
 }
 
 /**
  * Build the public line.
  * Per person (payout address): group 1 = self-backed fee total, group 2 = other fees.
  * Group 1 entries come first, each group ascending by total; ties go to the earlier first claim.
- * A person can appear in both groups. Payments to an address fill that person's entries in line order.
+ * A person can appear in both groups. Payments to an address fill that person's claims in claim-time order.
  */
 export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): LineEntry[] {
   type Acc = { address: string; group: 1 | 2; feeCents: number; projects: Set<string>; firstAt: string; label: string; pid: string };
@@ -379,16 +421,36 @@ export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): Lin
     paidBy.set(a, (paidBy.get(a) ?? 0n) + paymentUnits(pay.amount_units));
   }
 
-  const byPerson = new Map<string, Acc[]>();
-  for (const a of sorted) byPerson.set(a.address, [...(byPerson.get(a.address) ?? []), a]);
-  const filled = new Map<Acc, { paidCents: number; status: LineStatus }>();
-  for (const [address, mine] of byPerson) {
-    fillPerson(mine.map((a) => a.feeCents), paidBy.get(address) ?? 0n).forEach((f, j) => filled.set(mine[j]!, f));
+  // Fill per claim, in claim-time order, then add up per entry. A forgiven claim is closed for good:
+  // a later claim never reopens its shortfall, even when it joins the same entry.
+  const claimsBy = new Map<string, ClaimRecord[]>();
+  for (const c of claims) {
+    const a = c.payout_address.toLowerCase();
+    claimsBy.set(a, [...(claimsBy.get(a) ?? []), c]);
+  }
+  const filled = new Map<Acc, { paidCents: number; status: LineStatus; forgivenCents: number }>();
+  for (const [address, mine] of claimsBy) {
+    const ordered = byClaimTime(mine);
+    const fills = fillPerson(ordered.map((c) => c.fee_cents), paidBy.get(address) ?? 0n);
+    const sums = new Map<1 | 2, { paid: number; n: number; paidN: number; forgiven: number }>();
+    ordered.forEach((c, j) => {
+      const g: 1 | 2 = c.self_backed ? 1 : 2;
+      const cur = sums.get(g) ?? { paid: 0, n: 0, paidN: 0, forgiven: 0 };
+      const f = fills[j]!;
+      sums.set(g, { paid: cur.paid + f.paidCents, n: cur.n + (c.fee_cents > 0 ? 1 : 0), paidN: cur.paidN + (f.status === "paid" ? 1 : 0), forgiven: cur.forgiven + f.forgivenCents });
+    });
+    for (const g of [1, 2] as const) {
+      const a = byKey.get(`${address}|${g}`);
+      const t = sums.get(g);
+      if (!a || !t) continue;
+      const status: LineStatus = t.n > 0 && t.paidN === t.n ? "paid" : t.paid > 0 ? "partial" : "waiting";
+      filled.set(a, { paidCents: t.paid, status, forgivenCents: t.forgiven });
+    }
   }
 
   const shownExtras = new Set<string>();
   return sorted.map((a, i) => {
-    const { paidCents, status } = filled.get(a)!;
+    const { paidCents, status, forgivenCents } = filled.get(a) ?? { paidCents: 0, status: "waiting" as LineStatus, forgivenCents: 0 };
     const projects = [...a.projects].sort();
     const label = latestLabel.get(a.address)?.label || projects.join(", ");
     const extras = shownExtras.has(a.address) ? undefined : extrasBy.get(a.address);
@@ -402,6 +464,7 @@ export function buildLine(claims: ClaimRecord[], payments: PaymentRecord[]): Lin
       feeCents: a.feeCents,
       paidCents,
       status,
+      forgivenCents,
       shortAddress: shortAddress(a.address),
       firstAt: a.firstAt,
       ...(extras ? { extras } : {}),

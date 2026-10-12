@@ -71,7 +71,7 @@ describe("buildLine ordering", () => {
     expect(b.status).toBe("waiting");
   });
 
-  describe("forgiveness band: 99.5% of a fee is paid in full", () => {
+  describe("forgiveness band: 99.1% of a fee is paid in full", () => {
     const pay = (to: string, units: string, tx = "0x1"): PaymentRecord => ({ tx_hash: tx, to_address: to, amount_units: units, block_time: "2026-10-05T00:00:00Z" });
 
     it("$10 paid with 9,950,000 units is paid and owes nothing", () => {
@@ -91,16 +91,25 @@ describe("buildLine ordering", () => {
       expect([e!.status, e!.paidCents]).toEqual(["paid", 1000]);
     });
 
-    it("below 99.5% stays partial, and a forgiven shortfall is not carried to the next entry", () => {
-      const [p] = buildLine([claim(C, 1000, false, "2026-10-01T00:00:00Z")], [pay(C, "9949999")]);
-      expect([p!.status, p!.paidCents]).toEqual(["partial", 994]);
+    it("$10 paid with 9,910,000 units (0.9% short) is paid, with 9 cents forgiven", () => {
+      const [e] = buildLine([claim(C, 1000, false, "2026-10-01T00:00:00Z")], [pay(C, "9910000")]);
+      expect([e!.status, e!.paidCents, e!.forgivenCents]).toEqual(["paid", 1000, 9]);
+      expect(owedUnits([e!])).toBe(0n);
+      const [exact] = buildLine([claim(C, 1000, false, "2026-10-01T00:00:00Z")], [pay(C, "10000000")]);
+      expect(exact!.forgivenCents).toBe(0);
+    });
+
+    it("below 99.1% stays partial, and a forgiven shortfall is not carried to the next entry", () => {
+      const [p] = buildLine([claim(C, 1000, false, "2026-10-01T00:00:00Z")], [pay(C, "9909999")]);
+      expect([p!.status, p!.paidCents, p!.forgivenCents]).toEqual(["partial", 990, 0]);
       const line = buildLine([claim(C, 1000, true, "2026-10-01T00:00:00Z"), claim(C, 500, false, "2026-10-01T00:00:00Z")], [pay(C, "9950000")]);
       expect(line.map((e) => [e.status, e.paidCents])).toEqual([["paid", 1000], ["waiting", 0]]);
     });
 
-    it("forgives against the person's total: $10 + $5 paid with 14,925,000 units is all paid", () => {
-      const line = buildLine([claim(C, 1000, true, "2026-10-01T00:00:00Z"), claim(C, 500, false, "2026-10-01T00:00:00Z")], [pay(C, "14925000")]);
+    it("forgives against the person's total: $10 + $5 paid with 14,865,000 units is all paid", () => {
+      const line = buildLine([claim(C, 1000, true, "2026-10-01T00:00:00Z"), claim(C, 500, false, "2026-10-01T00:00:00Z")], [pay(C, "14865000")]);
       expect(line.map((e) => [e.status, e.paidCents])).toEqual([["paid", 1000], ["paid", 500]]);
+      expect(line.reduce((s, e) => s + (e.forgivenCents ?? 0), 0)).toBe(14);
       expect(owedUnits(line)).toBe(0n);
     });
   });

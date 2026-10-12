@@ -151,8 +151,8 @@ describe("/api/line/hold", () => {
     const f = db();
     const res = await post(holdRoute, { pids: [PID[C]], source: "outside" }, "2.2.2.2");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ held: true, until: "2026-10-12T12:10:00.000Z", pids: [PID[C]] });
-    expect(f.tables.pledger_holds).toEqual([{ id: expect.any(String), payout_address: C, expires_at: "2026-10-12T12:10:00.000Z", source: "outside" }]);
+    expect(await res.json()).toEqual({ held: true, until: "2026-10-12T12:10:00.000Z", pids: [PID[C]], skipped: [] });
+    expect(f.tables.pledger_holds).toEqual([{ id: expect.any(String), payout_address: C, created_at: "2026-10-12T12:00:00.000Z", expires_at: "2026-10-12T12:10:00.000Z", source: "outside" }]);
   });
 
   it("before sql/005: answers held false, so the payer still sees the amount and address", async () => {

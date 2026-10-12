@@ -157,7 +157,8 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
 
       {phase === "done" && result && <Result r={result} onAgain={() => { setResult(null); setGiveStep(null); setPhase("ready"); }} />}
 
-      {address && phase !== "funding" && <CardFund address={address} />}
+      {/* Stays mounted through "Try again" (which refunds from the faucet), so a card session in progress is kept. */}
+      {address && <CardFund address={address} />}
 
       {phase === "error" && (
         <div className="try-error" role="alert">
@@ -176,7 +177,8 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
 /**
  * Card step of the demo route: Stripe sells USDC on Tempo into this test wallet, locked to it.
  * Stripe cannot call the pool, so the gift still goes from the wallet. Sandbox only: no real
- * tokens arrive, and the faucet still supplies the test money for the gift.
+ * tokens arrive, and the faucet still supplies the test money for the gift. The sandbox notes show only
+ * with a pk_test key; the server turns a live key away for Tempo.
  */
 function CardFund({ address }: { address: Address }) {
   const [open, setOpen] = useState(false);
@@ -222,16 +224,18 @@ function CardFund({ address }: { address: Address }) {
 
   return (
     <div className="try-card">
-      <p className="try-note">
-        The demo shows the whole route, from card to USDC on Tempo to a matched gift, with the card step in Stripe&rsquo;s sandbox.
-      </p>
+      {TEST_MODE && (
+        <p className="try-note">
+          The demo shows the whole route, from card to USDC on Tempo to a matched gift, with the card step in Stripe&rsquo;s sandbox.
+        </p>
+      )}
       <div className="try-card-row">
         <button type="button" className="btn btn-ghost" onClick={begin} aria-expanded={open}>
           Fund this test wallet by card
         </button>
         {TEST_MODE && <span className="chip try-test">Test mode</span>}
       </div>
-      <p className="try-note">Sandbox: the card step is a demo. Test money for the donation still comes from the faucet.</p>
+      {TEST_MODE && <p className="try-note">Sandbox: the card step is a demo. Test money for the donation still comes from the faucet.</p>}
       {open && (
         <div className="try-card-pay" role="region" aria-label="Fund this test wallet by card">
           {busy && <p className="try-note">Loading…</p>}

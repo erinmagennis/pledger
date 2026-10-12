@@ -1,6 +1,7 @@
 // Base mainnet reads: USDC payment checks and smart-wallet-aware signature checks.
 import { createPublicClient, http, getAddress, type Hex, type PublicClient } from "viem";
 import { base } from "viem/chains";
+import { allowanceUnits } from "./claims";
 
 /** Native USDC on Base mainnet. */
 export const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
@@ -74,14 +75,16 @@ export const dollars = (units: bigint) => "$" + (Number(units / 10_000n) / 100).
 
 /**
  * The payment rule: a payment counts only if it was sent after the person's first claim
- * and is their full remaining amount, give or take 0.5%. (Self-transfers are dropped before this.)
+ * and is their full remaining amount, within 0.9% either way, the allowance capped at $1.00 (allowanceUnits).
+ * (Self-transfers are dropped before this.)
  */
 export const SENT_BEFORE = "Sent before this claim was made";
 
 export function checkPaymentRule(args: { blockTime: string; firstClaimAt: string; amountUnits: bigint; owedUnits: bigint }): { ok: true } | { ok: false; error: string } {
   if (!(toMs(args.blockTime) > toMs(args.firstClaimAt))) return { ok: false, error: SENT_BEFORE };
   const { amountUnits: a, owedUnits: o } = args;
-  if (o <= 0n || a * 1000n < o * 995n || a * 1000n > o * 1005n) return { ok: false, error: `Does not match what is owed (${dollars(o > 0n ? o : 0n)})` };
+  const allow = allowanceUnits(o);
+  if (o <= 0n || a < o - allow || a > o + allow) return { ok: false, error: `Does not match what is owed (${dollars(o > 0n ? o : 0n)})` };
   return { ok: true };
 }
 

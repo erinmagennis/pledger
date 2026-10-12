@@ -8,6 +8,8 @@ import { DB_MISSING, getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Public records (recordClaims) run after the answer and wait for a Base tx: give them a minute.
+export const maxDuration = 60;
 
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 

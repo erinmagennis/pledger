@@ -9,16 +9,26 @@ const WHO_BG: Record<Pledge["kind"], string> = {
   private: "var(--ground)",
 };
 
+/** The funder avatar. A private funder gets a lock instead of a "?". */
+export function WhoAvatar({ pledge }: { pledge: Pledge }) {
+  if (pledge.kind === "private") {
+    return <span className="av lock" style={{ background: WHO_BG.private }}><Icon name="lock" small /></span>;
+  }
+  return <span className="av" style={{ background: WHO_BG[pledge.kind] }}>{pledge.by.initials}</span>;
+}
+
 export function PledgeCard({ pledge }: { pledge: Pledge }) {
   return (
     <Link className="pl" href={`/pledges/${pledge.slug}`}>
       <div className="top">
         <span className="who">
-          <span className="av" style={{ background: WHO_BG[pledge.kind] }}>{pledge.by.initials}</span>
+          <WhoAvatar pledge={pledge} />
           {pledge.by.name}
         </span>
-        <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span> {pledge.demo && <span className="chip demo">Demo · test money</span>}
-        {pledge.testnet && <span className="chip demo">Testnet · test money</span>}
+        <span className="chips">
+          <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span>
+          {(pledge.demo || pledge.testnet) && <span className="chip demo">Test money</span>}
+        </span>
       </div>
       <h3>{pledge.title}</h3>
       {pledge.progress !== undefined && (

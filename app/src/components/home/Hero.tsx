@@ -21,7 +21,7 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
         </div>
       </div>
       <div className="stage">
-        <div className="artslot">Hero art (Higgsfield)</div>
+        <div className="artslot" aria-hidden="true" />
         {latest && pool && (
           <div className="float f2">
             <span className="ic"><Icon name="check" /></span>
@@ -35,8 +35,7 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
           <span className="t">{featured.title}</span>
           <div className="chips">
             <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span>
-            {featured.demo && <span className="chip demo">Demo · test money</span>}
-            {featured.testnet && <span className="chip demo">Testnet · test money</span>}
+            {(featured.demo || featured.testnet) && <span className="chip demo">Test money</span>}
           </div>
           {pool ? (
             <>

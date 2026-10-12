@@ -6,6 +6,8 @@ import { getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Public records (recordClaims) run after the answer and wait for a Base tx: give them a minute.
+export const maxDuration = 60;
 
 /**
  * Stripe webhook for crypto.onramp_session.updated. On fulfillment_complete, the on-chain tx

@@ -58,6 +58,8 @@ details.cl-help ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
 .cl-entry .amt{text-align:right}
 .cl-entry .amt b{display:block;font-weight:600}
 .cl-entry .amt small{font-size:13px;color:var(--soft)}
+.cl-entry .amt .cl-rec{display:block;margin-top:4px;font-size:12px;color:var(--soft)}
+.cl-entry .amt .cl-forgiven{display:block;margin-top:4px;font-size:12px;color:var(--soft);max-width:240px;margin-left:auto}
 .cl-entry .act{display:contents}
 .cl-paybtn{justify-self:end}
 .cl-pay{grid-column:1/-1;margin:8px 0 0 60px;background:var(--ground);border-radius:var(--r-sm);padding:16px;display:grid;gap:12px;font-size:15px}
@@ -66,6 +68,10 @@ details.cl-help ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
 /* under a line row: someone paying now, extras received, paying outside Pledger */
 .cl-rowmore{margin:10px 0 0 60px;display:grid;gap:8px;font-size:14px;color:var(--soft)}
 .cl-held{justify-self:start;background:var(--butter-soft);color:#7a6420;border-radius:999px;padding:3px 10px;font-size:13px}
+.cl-held-act{grid-column:2/-1;justify-self:end}
+.cl-paybtn:disabled{opacity:.45;cursor:not-allowed}
+/* touch targets: 44px tall for the small row buttons, Copy and Pay */
+.cl-line .btn-sm,.cl-copy .btn,.cl-paybtn,.cl-pay .btn{min-height:44px}
 .cl-outside-start{display:grid;gap:8px;justify-items:start}
 .cl-outside-start .btn-sm{padding:6px 14px;font-size:14px}
 .cl-outside{display:grid;gap:10px;background:var(--ground);border-radius:var(--r-sm);padding:14px 16px;color:var(--ink);font-size:15px;margin:0}
@@ -85,6 +91,18 @@ details.cl-help ul{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
  .cl-pay{margin-left:0}
  .cl-rowmore{margin-left:0}
  .cl-place{font-size:64px}
+ .cl-held-act{justify-self:start}
+}
+/* phones: amount and status go under the name, so the name keeps the full width instead of wrapping */
+@media(max-width:600px){
+ .cl-entry{grid-template-columns:34px 1fr;gap:4px 14px}
+ .cl-entry .who{grid-column:2}
+ .cl-entry .amt{grid-column:2;text-align:left;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+ .cl-entry .amt b{display:inline}
+ .cl-entry .amt .cl-rec{display:inline;margin-top:0}
+ .cl-entry .amt .cl-forgiven{flex-basis:100%;margin:0;max-width:none}
+ .cl-paybtn,.cl-held-act{grid-column:2;justify-self:start}
+ .cl-rowmore{margin-left:48px}
 }
 .cl-confirm{display:flex;align-items:flex-start;gap:10px;margin-top:14px;font-size:15px;cursor:pointer}
 .cl-confirm input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}

@@ -30,7 +30,7 @@ export type RecordResult =
   | { ok: false; status: number; error: string; duplicate?: boolean };
 
 /** What one person still owes, in USDC units: fee minus paid over their unpaid and partial entries.
- * A forgiven entry (paid at 99.5% or more) is "paid" in buildLine, so it adds 0 here. */
+ * A forgiven entry (short by no more than the allowance) is "paid" in buildLine, so it adds 0 here. */
 export function owedUnits(entries: LineEntry[]): bigint {
   return entries.reduce((s, e) => (e.status === "paid" ? s : s + centsToUnits(Math.max(0, e.feeCents - e.paidCents))), 0n);
 }
@@ -61,7 +61,7 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
   const checked = await check(txHash, to);
   if (!checked.ok) return { ok: false, status: 400, error: PAYMENT_REASONS[checked.reason] ?? "Could not check that payment" };
 
-  // The rule: sent after the first claim, and the full remaining amount give or take 0.5%.
+  // The rule: sent after the first claim, and the full remaining amount within 0.9% either way (at most $1.00).
   // Extras are left out here (buildLine skips them), so they never change what is owed.
   let before;
   try {
@@ -127,7 +127,7 @@ export async function recordUsdcPayment(db: SupabaseClient, to: string, txHash: 
 }
 
 /** One "paid" record per claim of this person. */
-const paidInputs = (claims: ClaimRecord[], to: string): RecordInput[] =>
+export const paidInputs = (claims: ClaimRecord[], to: string): RecordInput[] =>
   claims.map((c) => ({
     claimId: c.id,
     fingerprint: c.fingerprint,

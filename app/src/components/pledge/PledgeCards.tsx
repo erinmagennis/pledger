@@ -2,10 +2,18 @@ import { Button } from "../Button";
 import { Icon, type IconName } from "../Icons";
 import { ARTIZEN_RULE, moneyRows, type LineStats, type Pledge } from "@/lib/pledges";
 
+/** Date of the Zcash viewing-key snapshot (see ZCASH in lib/pledges). */
+const ZCASH_CHECKED = "12 Oct 2026";
+
 export function InPlaceCard({ pledge }: { pledge: Pledge }) {
   return (
     <div className="card">
-      <span className="k"><span className="live" />Checked on {pledge.chain}</span>
+      {pledge.chain === "Zcash testnet" ? (
+        // A one-time snapshot, not a live check: neutral dot and the snapshot date.
+        <span className="k"><span className="live still" />Checked {ZCASH_CHECKED}</span>
+      ) : (
+        <span className="k"><span className="live" />Checked on {pledge.chain}</span>
+      )}
       <h2 style={{ marginTop: 8 }}>What&apos;s in place</h2>
       <div className="mini">
         {pledge.inPlace.map((r) => (
@@ -94,7 +102,7 @@ export function RuleCard({ stats }: { stats: LineStats }) {
           </p>
           <div className="gb-rule-cta">
             <Button href="/pledges/test-match-pool" variant="ghost">See a locked pledge</Button>
-            <span className="chip demo">Demo · test money</span>
+            <span className="chip demo">Test money</span>
           </div>
         </div>
       </div>

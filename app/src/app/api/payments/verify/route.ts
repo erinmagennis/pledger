@@ -7,6 +7,8 @@ import { DB_MISSING, getSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Public records (recordClaims) run after the answer and wait for a Base tx: give them a minute.
+export const maxDuration = 60;
 
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
@@ -22,6 +24,7 @@ export async function POST(req: Request) {
   } catch {
     return bad("Send claimAddress and txHash");
   }
+  if (!body || typeof body !== "object") return bad("Send a JSON object");
   const to = String(body.claimAddress ?? "").toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(to)) return bad("Unknown person");
   const txHash = parseTxHash(String(body.txHash ?? ""));

@@ -6,6 +6,8 @@
 // and the answer says held: false.
 // In-memory limits per IP (src/lib/ratelimit.ts; reset on restart, per serverless instance): requests per
 // window, and at most PER_IP_HELD people held at once. Holding more ends that IP's oldest holds.
+// Cooldown (claims-server holdCooldowns): a person whose hold ran out in the last 20 minutes with no payment
+// recorded since is not held again; their pid comes back in `skipped`.
 import { NextResponse } from "next/server";
 import { isHoldSource } from "@/lib/claims";
 import { createHolds, endHolds, payoutAddressesFor } from "@/lib/claims-server";
@@ -52,6 +54,7 @@ export async function POST(req: Request) {
   } catch {
     return bad("Send pids and source");
   }
+  if (!body || typeof body !== "object") return bad("Send a JSON object");
   if (!isHoldSource(body.source)) return bad("Send pids and source");
   if (!Array.isArray(body.pids) || !body.pids.length || !body.pids.every((p) => typeof p === "string")) return bad("Send pids and source");
   const pids = [...new Set(body.pids as string[])];
@@ -67,8 +70,10 @@ export async function POST(req: Request) {
     const r = await createHolds(db, [...addresses.values()], body.source, now);
     if (r.ok) {
       const held = [...addresses].flatMap(([pid, a]): [string, string][] => (r.ids.has(a) ? [[pid, r.ids.get(a)!]] : []));
-      await endHolds(db, trackHolds(ip, held, Date.parse(r.until), now), now);
-      return NextResponse.json({ held: true, until: r.until, pids: [...addresses.keys()] });
+      const skipped = [...addresses].filter(([, a]) => r.skipped.includes(a)).map(([pid]) => pid);
+      if (held.length) await endHolds(db, trackHolds(ip, held, Date.parse(r.until), now), now);
+      // `skipped`: a hold on them just ran out with no payment, so they stay open to everyone for a while.
+      return NextResponse.json({ held: held.length > 0, until: r.until, pids: held.map(([pid]) => pid), skipped });
     }
     if (r.missing) return NextResponse.json({ held: false, pids: [...addresses.keys()] });
     return bad(r.error, 500);

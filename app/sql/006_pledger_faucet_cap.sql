@@ -4,7 +4,7 @@
 -- server memory and resets on restart.
 
 -- One row per wallet the demo funded. The app counts the last hour and turns people away at 40.
--- ip_hash is a sha256 of the caller's IP, never the IP itself.
+-- ip_hash is an HMAC-SHA256 of the caller's IP with PLEDGER_PEPPER (plain sha256 if unset), never the IP itself.
 -- Server only: row level security on, no policies, so only the service key can read or write.
 create table if not exists public.pledger_faucet_log (
   id bigserial primary key,
@@ -16,3 +16,6 @@ create table if not exists public.pledger_faucet_log (
 alter table public.pledger_faucet_log enable row level security;
 
 create index if not exists pledger_faucet_log_created_idx on public.pledger_faucet_log (created_at);
+
+-- Tell the Supabase API to pick up the new table and column now, not on its next schema refresh.
+notify pgrst, 'reload schema';

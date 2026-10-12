@@ -78,6 +78,7 @@ export function OutsidePay({ pid, hasPay }: { pid: string; hasPay: boolean }) {
         <span className="cl-addr">{shown.address}</span>
         <button className="btn btn-ghost btn-sm" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
       </div>
+      <span className="cl-soft">If your exchange takes a fee, send from a wallet, or add the fee so the full amount arrives.</span>
       <span className="cl-soft">
         {hasPay ? (
           "After you send, press Pay and paste the transaction link so the line updates."

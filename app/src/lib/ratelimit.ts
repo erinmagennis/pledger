@@ -11,6 +11,7 @@ const buckets = new Map<string, Map<string, number[]>>();
 export function limit(key: string, ip: string, max: number, windowMs: number, now = Date.now()): boolean {
   const byIp = buckets.get(key) ?? new Map<string, number[]>();
   buckets.set(key, byIp);
+  prune(byIp, windowMs, now);
   const hits = (byIp.get(ip) ?? []).filter((t) => now - t < windowMs);
   if (hits.length >= max) {
     byIp.set(ip, hits);
@@ -19,6 +20,19 @@ export function limit(key: string, ip: string, max: number, windowMs: number, no
   hits.push(now);
   byIp.set(ip, hits);
   return true;
+}
+
+/** Drop IPs with no hit in the last 2 windows, so memory does not grow with every IP ever seen. */
+function prune(byIp: Map<string, number[]>, windowMs: number, now: number) {
+  for (const [ip, hits] of byIp) {
+    const last = hits[hits.length - 1];
+    if (last === undefined || now - last >= 2 * windowMs) byIp.delete(ip);
+  }
+}
+
+/** For tests: how many IPs are tracked under `key`. */
+export function trackedIps(key: string): number {
+  return buckets.get(key)?.size ?? 0;
 }
 
 /** The caller's IP from the proxy headers, or "local". */

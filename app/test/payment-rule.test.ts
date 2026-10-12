@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Hex } from "viem";
 import { BASE_USDC, TRANSFER_TOPIC, checkPaymentRule, usdcTransfersTo, type CheckedPayment, type ReceiptLike } from "@/lib/base";
-import type { LineEntry } from "@/lib/claims";
+import { allowanceUnits, type LineEntry } from "@/lib/claims";
 import { allPaid, extraMessage, owedUnits, recordUsdcPayment, type PaymentDeps } from "@/lib/payments-server";
 import type { RecordInput } from "@/lib/eas";
 import { fakeDb, type FakeSchema } from "./fake-db";
@@ -33,15 +33,26 @@ describe("payment rule", () => {
     expect(checkPaymentRule({ ...ok, blockTime: "2026-10-12T10:00:00.123Z" })).toEqual(before);
   });
 
-  it("accepts within 0.5% either way", () => {
+  it("accepts within 0.9% either way: $10 owed takes $9.91 to $10.09", () => {
+    expect(checkPaymentRule({ ...ok, amountUnits: 9_910_000n })).toEqual({ ok: true });
     expect(checkPaymentRule({ ...ok, amountUnits: 9_950_000n })).toEqual({ ok: true });
-    expect(checkPaymentRule({ ...ok, amountUnits: 10_050_000n })).toEqual({ ok: true });
+    expect(checkPaymentRule({ ...ok, amountUnits: 10_090_000n })).toEqual({ ok: true });
   });
 
-  it("rejects below or above the range with what is owed", () => {
+  it("caps the allowance at $5.00 either way: $500 takes $495.50 to $504.50, $3000 takes $2995 to $3005", () => {
+    const at = (owed: number, amount: number) => checkPaymentRule({ ...ok, owedUnits: usd(owed), amountUnits: usd(amount) }).ok;
+    expect([at(500, 495.5), at(500, 504.5), at(500, 495.49), at(500, 504.51)]).toEqual([true, true, false, false]);
+    expect([at(3000, 2995), at(3000, 3005), at(3000, 2994.99), at(3000, 3005.01)]).toEqual([true, true, false, false]);
+    expect(allowanceUnits(usd(10))).toBe(90_000n);
+    expect(allowanceUnits(usd(3000))).toBe(5_000_000n);
+  });
+
+  it("rejects below or above the range with what is owed: $9.90 and $10.10 on $10 are extras", () => {
     const err = { ok: false, error: "Does not match what is owed ($10.00)" };
-    expect(checkPaymentRule({ ...ok, amountUnits: 9_949_999n })).toEqual(err);
-    expect(checkPaymentRule({ ...ok, amountUnits: 10_050_001n })).toEqual(err);
+    expect(checkPaymentRule({ ...ok, amountUnits: 9_909_999n })).toEqual(err);
+    expect(checkPaymentRule({ ...ok, amountUnits: 10_090_001n })).toEqual(err);
+    expect(checkPaymentRule({ ...ok, amountUnits: usd(9.9) })).toEqual(err);
+    expect(checkPaymentRule({ ...ok, amountUnits: usd(10.1) })).toEqual(err);
     expect(checkPaymentRule({ ...ok, amountUnits: usd(5) })).toEqual(err);
   });
 
@@ -173,8 +184,8 @@ describe("recordUsdcPayment", () => {
     vi.restoreAllMocks();
   });
 
-  it("accepts 99.5% of what is owed and attests, with nothing left owing", async () => {
-    const s = setup({ units: 14_925_000n });
+  it("accepts 99.1% of what is owed and attests, with nothing left owing", async () => {
+    const s = setup({ units: 14_865_000n });
     expect((await s.run()).ok).toBe(true);
     expect(s.attested).toHaveLength(1);
   });

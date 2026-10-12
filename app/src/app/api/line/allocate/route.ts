@@ -28,6 +28,7 @@ export async function POST(req: Request) {
   } catch {
     return bad("Send an amount or a number of people");
   }
+  if (!body || typeof body !== "object") return bad("Send a JSON object");
 
   let mode: AllocMode;
   let requestedCents: number | null = null;

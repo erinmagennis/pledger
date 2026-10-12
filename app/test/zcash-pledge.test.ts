@@ -24,7 +24,11 @@ describe("Zcash testnet pledge", () => {
     expect(p!.chain).toBe("Zcash testnet");
     expect(KIND_LABEL[p!.kind]).toBe("Private funder");
     expect(getPledges().map((x) => x.slug)).toEqual(["test-match-pool", "artizen-give-back", ZCASH_SLUG]);
-    expect(p!.inPlace.find((r) => r.label === "In place now")?.value).toBe("0.1239 TAZ (testnet)");
+    expect(p!.inPlace.find((r) => r.label === "In place now (snapshot)")?.value).toBe("0.1239 TAZ (Zcash test money)");
+    // No bare ticker on first use: header and home card both name the unit in words.
+    expect(p!.stats[0]).toEqual({ value: "0.1239 TAZ (Zcash test money)", label: "in place now (snapshot)" });
+    expect(p!.cardStats![0]).toEqual({ value: "0.1239 TAZ (Zcash test money)", label: "in place now (snapshot)" });
+    expect(p!.howItWorks).toContain("The key also shows payments going out, including where they went.");
     expect(p!.activity.every((a) => a.href?.startsWith("https://testnet.cipherscan.app/tx/"))).toBe(true);
   });
 

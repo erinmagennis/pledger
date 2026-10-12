@@ -7,7 +7,7 @@ import { Icon } from "@/components/Icons";
 import { CardPay } from "./CardPay";
 import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
 import { centsToUnits, formatCents, type LineEntry } from "@/lib/claims";
-import { forgetSent, hold, loadSent, rememberSent, sentId, worthRetrying } from "./holds";
+import { forgetSent, hold, isMine, loadSent, rememberSent, sentId, useMyHolds, worthRetrying } from "./holds";
 
 /** Thrown when a payment could not be recorded. `final` is the rule saying no for good; otherwise check again later. */
 class RecordError extends Error {
@@ -79,11 +79,16 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
   const switchChain = useSwitchChain();
   const write = useWriteContract();
   const client = usePublicClient({ chainId: base.id });
+  useMyHolds();
+  // Someone else is paying this person now: Pay waits (the row shows the hold beside the button). The list re-renders
+  // this panel as the hold runs out.
+  const heldByOther = !!entry.held && !!entry.heldUntil && Date.parse(entry.heldUntil) > Date.now() && !isMine(entry.pid);
 
   // A payment to this person sent on an earlier visit and never recorded: check it again, once per page.
-  // A person can have two rows (two groups); the first unpaid one does it.
+  // A person can have two rows (two groups); the first one does it. This runs even when the row shows paid
+  // (someone else may have paid too, or it was paid outside): the server decides, and an extra is kept as an extra.
   useEffect(() => {
-    if (replayed.current || entry.status === "paid") return;
+    if (replayed.current) return;
     replayed.current = true;
     const stored = loadSent("pay").find((s) => s.pid === entry.pid);
     if (!stored || replayedPids.has(entry.pid)) return;
@@ -108,7 +113,18 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
   }, []);
 
   const remaining = Math.max(0, owedCents);
-  if (entry.status === "paid") return null;
+  if (entry.status === "paid") {
+    // Only the answer for a payment sent earlier shows on a paid row; nothing is left to pay.
+    if (!replaying && !msg && !err) return null;
+    return (
+      <div className="cl-pay" aria-live="polite">
+        {hash && <a className="cl-soft" href={BASESCAN_TX + hash} target="_blank" rel="noreferrer">View on Basescan</a>}
+        {replaying && <span className="cl-soft">Checking a payment you sent earlier…</span>}
+        {msg && <span>{msg}</span>}
+        {err && <span className="cl-error">{err}</span>}
+      </div>
+    );
+  }
 
   async function openPanel() {
     // Opening holds this person for 10 minutes, so "Help pay people back" sends other helpers to the next people.
@@ -200,7 +216,7 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
 
   return (
     <>
-      <button className="btn btn-primary btn-sm cl-paybtn" onClick={openPanel} aria-expanded={open}>
+      <button className="btn btn-primary btn-sm cl-paybtn" onClick={openPanel} aria-expanded={open} disabled={heldByOther && !open}>
         Pay<span className="arr"><Icon name="arrow" small /></span>
       </button>
       {open && (
@@ -225,7 +241,7 @@ export function PayPanel({ entry, owedCents, onPaid }: { entry: LineEntry; owedC
                   {busy ? "Working…" : "Check again"}
                 </button>
               ) : (
-                <button className="btn btn-primary" disabled={!address || busy || remaining === 0} onClick={pay}>
+                <button className="btn btn-primary" disabled={!address || busy || remaining === 0 || heldByOther} onClick={pay}>
                   {busy ? "Working…" : `Pay ${formatCents(remaining)}`}
                   <span className="arr"><Icon name="arrow" /></span>
                 </button>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadLine, payoutAddressFor } from "@/lib/claims-server";
-import { buildOnrampParams, clientIp, friendlyStripeError, NOT_CONNECTED_MSG, parseTempoBody, type OnrampNetwork } from "@/lib/onramp";
+import { buildOnrampParams, clientIp, friendlyStripeError, NOT_CONNECTED_MSG, NOTHING_OWED_MSG, parseTempoBody, TEMPO_SANDBOX_ONLY_MSG, tempoAllowed, type OnrampNetwork } from "@/lib/onramp";
 import { ipOf, limit, tooMany, TEN_MIN } from "@/lib/ratelimit";
 import { DB_MISSING, getSupabase } from "@/lib/supabase";
 
@@ -15,6 +15,7 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
  *
  * Demo route: `{ network: "tempo", address, amountUsd? }` delivers USDC on Tempo to the demo pool's
  * test wallet instead. No database, nothing recorded; the donation is a separate step from that wallet.
+ * It runs only with a Stripe test key (sk_test_): with a live key it answers 503.
  */
 export async function POST(req: Request) {
   if (!limit("onramp-session", ipOf(req), 20, TEN_MIN)) return tooMany();
@@ -27,8 +28,10 @@ export async function POST(req: Request) {
   } catch {
     return bad("Send payeeId");
   }
+  if (!body || typeof body !== "object") return bad("Send a JSON object");
 
   if (body.network === "tempo") {
+    if (!tempoAllowed(key)) return bad(TEMPO_SANDBOX_ONLY_MSG, 503);
     const t = parseTempoBody(body);
     if ("error" in t) return bad(t.error);
     return mint(key, buildOnrampParams({ network: "tempo", address: t.address, remainingCents: t.amountCents, ip: clientIp(req.headers) }), "tempo");
@@ -42,15 +45,17 @@ export async function POST(req: Request) {
 
   // Remaining owed: everything this person is owed, across all their places. Any `group` is ignored,
   // because the payment rule checks a transfer against the person's full remaining.
-  let remainingCents = 0;
+  // A paid entry (forgiven included) owes nothing, the same test as owedUnits.
+  let remainingCents: number | null = null;
   try {
     const mine = (await loadLine(db)).filter((e) => e.pid === pid);
-    remainingCents = mine.reduce((s, e) => s + Math.max(0, e.feeCents - e.paidCents), 0);
+    remainingCents = mine.reduce((s, e) => s + (e.status === "paid" ? 0 : Math.max(0, e.feeCents - e.paidCents)), 0);
   } catch {
-    remainingCents = 0; // amount is optional; the payer can enter it in the widget
+    remainingCents = null; // amount is optional; the payer can enter it in the widget
   }
+  if (remainingCents === 0) return bad(NOTHING_OWED_MSG);
 
-  return mint(key, buildOnrampParams({ address: payee.address, remainingCents, ip: clientIp(req.headers) }));
+  return mint(key, buildOnrampParams({ address: payee.address, remainingCents: remainingCents ?? undefined, ip: clientIp(req.headers) }));
 }
 
 async function mint(key: string, params: URLSearchParams, network: OnrampNetwork = "base") {

@@ -10,9 +10,9 @@ import { base } from "wagmi/chains";
 import { Icon } from "@/components/Icons";
 import { BASE_USDC, BASESCAN_TX, USDC_ABI } from "@/lib/base";
 import { formatCents, shortAddress, unitsToCents } from "@/lib/claims";
-import { forgetSent, hold, loadSent, myHeldPids, rememberSent, sentId, worthRetrying, type SentTx } from "./holds";
+import { forgetCalls, forgetSent, hold, loadCalls, loadSent, myHeldPids, rememberCalls, rememberSent, sentId, worthRetrying, type BatchTransfer, type SentCalls, type SentTx } from "./holds";
 
-type PreviewTransfer = { pid: string; address: string; shortAddress: string; label: string; places: number[]; amountUnits: string; amountCents: number };
+type PreviewTransfer = BatchTransfer;
 type Preview = { transfers: PreviewTransfer[]; totalCents: number; leftoverCents: number; nextCents: number; heldCount?: number };
 /** A transfer that was sent, with the tx hashes to check it against (best match first). */
 type Sent = { t: PreviewTransfer; txs: string[] };
@@ -80,10 +80,14 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
   const [hashes, setHashes] = useState<string[]>([]);
   // Sent but not yet recorded. While this holds anything, the button checks again instead of sending.
   const [pending, setPending] = useState<Sent[]>([]);
-  const [callsId, setCallsId] = useState<{ id: string; list: PreviewTransfer[] } | null>(null);
+  // Wallet batches sent but not confirmed on Base yet (no hashes). Kept in this browser too, see holds.ts.
+  const [batches, setBatches] = useState<SentCalls[]>([]);
   // True while payments sent on an earlier visit (kept in this browser) are checked again.
   const [replaying, setReplaying] = useState(false);
   const replayed = useRef(false);
+  // A batch from an earlier visit waits for a connected wallet, then is checked once on its own.
+  const [earlierBatch, setEarlierBatch] = useState(false);
+  const batchReplayed = useRef(false);
 
   const config = useConfig();
   const { isConnected, chainId } = useConnection();
@@ -143,7 +147,7 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
   /** No one owes anything: hide the wallet buttons. */
   const lineEmpty = !!preview && !count && !preview.nextCents;
   /** A payment was sent and is not recorded yet. */
-  const waiting = pending.length > 0 || !!callsId;
+  const waiting = pending.length > 0 || batches.length > 0;
 
   /** Pair each transfer with the batch's hashes. Prefer the matching receipt when the wallet sent one tx per call. */
   const pairUp = (list: PreviewTransfer[], txs: string[]): Sent[] =>
@@ -190,7 +194,10 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
       })),
     });
     // From here the money may be on its way, so never offer a second send for this batch.
-    setCallsId({ id, list });
+    // Kept in this browser before waiting on Base, so a closed tab or a timeout does not lose it.
+    const batch: SentCalls = { id, list, at: Date.now() };
+    rememberCalls(batch);
+    setBatches((bs) => [...bs.filter((b) => b.id !== id), batch]);
     return confirmBatch(id, list);
   }
 
@@ -199,14 +206,19 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     const status = await waitForCallsStatus(config, { id, timeout: 180_000 });
     const txs = [...new Set((status.receipts ?? []).map((r) => r.transactionHash))];
     setHashes(txs);
+    const dropBatch = () => {
+      forgetCalls(id);
+      setBatches((bs) => bs.filter((b) => b.id !== id));
+    };
     if (status.status !== "success" || !txs.length) {
-      setCallsId(null); // failed on Base: nothing moved
+      dropBatch(); // failed on Base: nothing moved
       throw new Error("The batch did not go through on Base");
     }
-    setCallsId(null);
+    // The hashes are known: they move to the sent list (checked until recorded), and the batch is done here.
     const sent = pairUp(list, txs);
     rememberSent(sent.map(toStored));
-    setPending(sent);
+    dropBatch();
+    setPending((p) => [...p.filter((x) => !sent.some((y) => idOf(y) === idOf(x))), ...sent]);
     return txs;
   }
 
@@ -270,8 +282,13 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     setBusy(true);
     setErr(null);
     try {
-      // A batch that timed out has no hashes yet: wait for Base first.
-      const items = given ?? (callsId ? pairUp(callsId.list, await confirmBatch(callsId.id, callsId.list)) : pending);
+      // A batch that timed out (or was sent on an earlier visit) has no hashes yet: wait for Base first.
+      let items = given;
+      if (!items) {
+        const fromBatches: Sent[] = [];
+        for (const b of batches) fromBatches.push(...pairUp(b.list, await confirmBatch(b.id, b.list)));
+        items = [...pending.filter((x) => !fromBatches.some((y) => idOf(y) === idOf(x))), ...fromBatches];
+      }
       setProgress("Checking each payment…");
       const r = await recordAll(items);
       setPending(r.left);
@@ -293,6 +310,11 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
   useEffect(() => {
     if (replayed.current) return;
     replayed.current = true;
+    const saved = loadCalls();
+    if (saved.length) {
+      setBatches(saved);
+      setEarlierBatch(true);
+    }
     const items = loadSent("help").map(fromStored);
     if (!items.length) return;
     setPending(items);
@@ -301,8 +323,18 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A batch sent on an earlier visit: once a wallet is connected (and nothing else is being checked), ask it about
+  // the saved batch id. Only the wallet that sent it knows the id, so the page asks for the same wallet.
+  useEffect(() => {
+    if (!earlierBatch || batchReplayed.current || !isConnected || busy || !batches.length) return;
+    batchReplayed.current = true;
+    setReplaying(true);
+    void checkAgain().finally(() => setReplaying(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [earlierBatch, isConnected, busy, batches.length]);
+
   async function send() {
-    if (!count || !preview || pending.length || callsId) return;
+    if (!count || !preview || pending.length || batches.length) return;
     const list = transfers;
     setBusy(true);
     setErr(null);
@@ -473,6 +505,9 @@ export function HelpPay({ lineVersion, onPaid }: { lineVersion: number; onPaid: 
 
       <div className="cl-status">
         {replaying && <span className="cl-soft">Checking a payment you sent earlier…</span>}
+        {earlierBatch && batches.length > 0 && !isConnected && (
+          <span className="cl-soft">A payment batch you sent earlier is still being checked. Connect the same wallet to finish.</span>
+        )}
         {progress && <span>{progress}</span>}
         {done && <span>{done}</span>}
         {notes.map((n) => (

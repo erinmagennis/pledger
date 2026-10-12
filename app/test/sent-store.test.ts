@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { SENT_MAX_AGE, addSent, parseSent, pruneSent, sentId, serializeSent, worthRetrying, type SentTx } from "@/components/claim/holds";
+import {
+  HOLD_CHUNK,
+  SENT_MAX_AGE,
+  addCalls,
+  addSent,
+  chunk,
+  hold,
+  parseCalls,
+  parseSent,
+  pruneCalls,
+  pruneSent,
+  sentId,
+  serializeSent,
+  worthRetrying,
+  type BatchTransfer,
+  type SentCalls,
+  type SentTx,
+} from "@/components/claim/holds";
 import { TOO_MANY } from "@/lib/ratelimit";
 import { NEEDS_003 } from "@/lib/payments-server";
 
@@ -53,5 +70,69 @@ describe("sent txs kept in this browser", () => {
 
   it("matches ids case-insensitively", () => {
     expect(sentId({ address: A.toUpperCase().replace("0X", "0x"), txs: ["0xAB"] })).toBe(sentId({ address: A, txs: ["0xab"] }));
+  });
+});
+
+describe("holds go out in groups of 10", () => {
+  it("splits in order", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([], 10)).toEqual([]);
+  });
+
+  it("holds all 23 people, three requests, not only the first 10", async () => {
+    const bodies: string[][] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      const { pids } = JSON.parse(init.body) as { pids: string[] };
+      bodies.push(pids);
+      return new Response(JSON.stringify({ held: true, until: "2026-10-12T12:10:00Z", pids }), { status: 200 });
+    }) as unknown as typeof fetch;
+    try {
+      const pids = Array.from({ length: 23 }, (_, i) => `p${i}`);
+      const r = await hold([...pids, "p0", ""], "pledger");
+      expect(r.held).toBe(true);
+      expect(bodies.map((b) => b.length)).toEqual([HOLD_CHUNK, HOLD_CHUNK, 3]);
+      expect(bodies.flat()).toEqual(pids);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+
+  it("still says held when a later group fails", async () => {
+    const real = globalThis.fetch;
+    let n = 0;
+    globalThis.fetch = (async () =>
+      n++ === 0 ? new Response(JSON.stringify({ held: true, until: "2026-10-12T12:10:00Z" }), { status: 200 }) : new Response("{}", { status: 429 })) as unknown as typeof fetch;
+    try {
+      const r = await hold(Array.from({ length: 12 }, (_, i) => `q${i}`), "pledger");
+      expect(r).toEqual({ held: true, until: "2026-10-12T12:10:00Z" });
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});
+
+describe("wallet batches kept before Base answers", () => {
+  const t = (address: string): BatchTransfer => ({ pid: "p", address, shortAddress: "0xaa…aa", label: "A. A.", places: [1], amountUnits: "5000000", amountCents: 500 });
+  const calls = (id: string, at = NOW): SentCalls => ({ id, list: [t(A), t(B)], at });
+
+  it("round-trips and drops malformed or old batches", () => {
+    const list = [calls("c1"), calls("c2")];
+    expect(parseCalls(JSON.stringify(list), NOW)).toEqual(list);
+    expect(parseCalls(null, NOW)).toEqual([]);
+    expect(parseCalls("{nope", NOW)).toEqual([]);
+    expect(parseCalls(JSON.stringify([{ id: "x", list: [], at: NOW }, { ...calls("c3"), list: [{ address: A }] }, calls("old", NOW - SENT_MAX_AGE - 1), calls("c4")]), NOW)).toEqual([calls("c4")]);
+  });
+
+  it("adds by id without duplicates, and prunes one id", () => {
+    const list = addCalls(addCalls([calls("c1")], calls("c2")), { ...calls("c1"), at: NOW + 1 });
+    expect(list.map((c) => c.id)).toEqual(["c2", "c1"]);
+    expect(pruneCalls(list, "c2", NOW).map((c) => c.id)).toEqual(["c1"]);
+  });
+
+  it("two tabs that each add a batch keep both (each write starts from what is stored)", () => {
+    const stored = JSON.stringify(addCalls(parseCalls(null, NOW), calls("tab1")));
+    const after = addCalls(parseCalls(stored, NOW), calls("tab2"));
+    expect(after.map((c) => c.id)).toEqual(["tab1", "tab2"]);
   });
 });

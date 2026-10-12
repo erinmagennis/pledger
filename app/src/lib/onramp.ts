@@ -25,6 +25,11 @@ export const ONRAMP_CURRENCY = "usdc" as const;
 export const UNSUPPORTED_MSG = "Card payments to Base are available in the US for now.";
 export const NOT_CONNECTED_MSG = "Card payments are not connected yet";
 export const TEMPO_UNSUPPORTED_MSG = "Card payments to Tempo are not available where you are yet.";
+export const TEMPO_SANDBOX_ONLY_MSG = "Card to Tempo is a sandbox demo only";
+export const NOTHING_OWED_MSG = "Nothing is owed to this person right now";
+
+/** Card to Tempo runs only with a Stripe test key: it buys into a demo wallet, never for real money. */
+export const tempoAllowed = (stripeKey: string | undefined) => typeof stripeKey === "string" && stripeKey.startsWith("sk_test_");
 
 /** Form params for POST /v1/crypto/onramp_sessions. Locks the wallet, the network and USDC. */
 export function buildOnrampParams(args: { address: string; remainingCents?: number; ip?: string | null; network?: OnrampNetwork }): URLSearchParams {
@@ -51,9 +56,10 @@ export const TEMPO_MAX_USD = 500;
 export function parseTempoBody(body: unknown): { address: string; amountCents: number } | { error: string } {
   const b = (body ?? {}) as { network?: unknown; address?: unknown; amountUsd?: unknown };
   if (b.network !== "tempo") return { error: "Send network: tempo" };
-  const address = String(b.address ?? "");
-  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return { error: "Send a valid wallet address" };
-  const usd = b.amountUsd === undefined ? TEMPO_DEFAULT_USD : Number(b.amountUsd);
+  if (typeof b.address !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(b.address)) return { error: "Send a valid wallet address" };
+  const address = b.address;
+  // Numbers only: Number() would turn true, [7] or "0x10" into amounts.
+  const usd = b.amountUsd === undefined || b.amountUsd === null ? TEMPO_DEFAULT_USD : typeof b.amountUsd === "number" ? b.amountUsd : NaN;
   if (!Number.isFinite(usd) || usd < 1 || usd > TEMPO_MAX_USD) return { error: `Amount must be $1 to $${TEMPO_MAX_USD}` };
   return { address, amountCents: Math.round(usd * 100) };
 }
@@ -128,7 +134,11 @@ export function fulfilledTransfer(event: unknown): { txHash: string; to: string 
   if (td.destination_network && td.destination_network !== ONRAMP_NETWORK) return null;
   const tx = String(td.transaction_id ?? "").toLowerCase();
   if (!/^0x[0-9a-f]{64}$/.test(tx)) return null;
-  const to = String(td.wallet_address ?? td.wallet_addresses?.[ONRAMP_WALLET_KEY] ?? "").toLowerCase();
+  // A Base delivery names its wallet (wallet_address or wallet_addresses.base_network). A Tempo delivery with no
+  // destination_network has neither, so it is ignored here instead of being retried as a Base payment.
+  const wallet = td.wallet_address ?? td.wallet_addresses?.[ONRAMP_WALLET_KEY];
+  if (typeof wallet !== "string") return null;
+  const to = wallet.toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(to)) return null;
   return { txHash: tx, to };
 }

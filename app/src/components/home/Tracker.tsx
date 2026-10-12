@@ -17,7 +17,7 @@ export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: nu
       <div className="big">{formatCents(demoLead ? totals.testnetCents : totals.paidCents)}</div>
       {demoLead && (
         <p className="testnet-line">
-          <span className="chip demo">Demo · test money</span>
+          <span className="chip demo">Test money</span>
           {formatCents(totals.paidCents)} real so far
         </p>
       )}
@@ -39,14 +39,14 @@ export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: nu
             <li key={f.href}>
               <a href={f.href} target="_blank" rel="noreferrer">
                 {f.av ? (
-                  <span className="av" style={{ background: "var(--peach-soft)" }}>{f.av}</span>
+                  <span className="av person"><Icon name="user" small /></span>
                 ) : (
                   <span className="av ic"><Icon name="undo" small /></span>
                 )}
                 <span className="tx">
                   <b>{f.text}</b>
                   <small>
-                    {f.testnet && <span className="tag">test money</span>}
+                    {f.testnet && <span className="chip demo">Test money</span>}
                     <TimeAgo unix={f.time} renderedAt={renderedAt} />
                   </small>
                 </span>

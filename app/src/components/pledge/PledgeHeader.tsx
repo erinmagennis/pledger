@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Button } from "../Button";
 import { Icon, type IconName } from "../Icons";
-import { WHO_BG } from "../PledgeCard";
+import { WhoAvatar } from "../PledgeCard";
 import { KIND_LABEL, type Pledge } from "@/lib/pledges";
 
 /** One mini card on the right of the header, in the home hero float style. Desktop only. */
@@ -30,11 +30,11 @@ export function PledgeHeader({
   return (
     <header className={`phead ${pledge.kind}`}>
       <div className="meta-row">
-        <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span> {pledge.demo && <span className="chip demo">Demo · test money</span>}
-        {pledge.testnet && <span className="chip demo">Testnet · test money</span>}
+        <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span>
+        {(pledge.demo || pledge.testnet) && <span className="chip demo">Test money</span>}
         {!hideBy && (
           <span className="who">
-            <span className="av" style={{ background: WHO_BG[pledge.kind] }}>{pledge.by.initials}</span>
+            <WhoAvatar pledge={pledge} />
             Pledged by {pledge.by.name}
           </span>
         )}

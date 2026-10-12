@@ -9,7 +9,7 @@ A supporter pays someone in the line by card. Stripe sells USDC on Base and send
    - `lock_wallet_address=true`
    - `destination_networks[]=base`, `destination_network=base`
    - `destination_currencies[]=usdc`, `destination_currency=usdc`
-   - `destination_amount=<remaining in USD>` when known
+   - `destination_amount=<remaining in USD>` when known (if the person owes nothing right now, the route answers 400 "Nothing is owed to this person right now" and mints no session)
    - `customer_ip_address` from `x-forwarded-for`
    It returns `{ clientSecret, redirectUrl }` only.
 2. The Pay panel shows "Pay by card", with the line "Keep the amount as shown. A different amount cannot be matched to this person." It mounts Stripe's embedded onramp. On screens under 600px wide, or if the widget fails to load, it opens `redirectUrl` (a `crypto.link.com?session_hash=...` page hosted by Stripe/Link) in a new tab instead.
@@ -22,7 +22,9 @@ USDC on Base is supported for US customers (not EU). Others see "Card payments t
 The demo match pool page shows the whole route: card, then USDC on Tempo, then a matched donation. Stripe cannot call a contract; it only delivers tokens to a wallet. So the card buys USDC into the visitor's throwaway test wallet, and the existing "Try it" flow (or a connected wallet) then calls `donate` on the MatchPool from that wallet.
 
 1. "Try it" makes the test wallet. Once it exists, the card shows "Fund this test wallet by card" (hidden without `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, "Test mode" chip on `pk_test_...`).
-2. `POST /api/onramp/session` with `{ network: "tempo", address, amountUsd? }`. The address must be a valid EVM address; the amount is $1 to $500 and defaults to $20 (the page sends $20). No database lookup. Params:
+**Test key only.** The Tempo route runs only when `STRIPE_SECRET_KEY` starts with `sk_test_`. With a live key it answers 503 "Card to Tempo is a sandbox demo only", so real card money can never be sent into a demo wallet.
+
+2. `POST /api/onramp/session` with `{ network: "tempo", address, amountUsd? }`. The address must be a valid EVM address string; the amount must be a number from $1 to $500 and defaults to $20 when left out or null (the page sends $20). No database lookup. Params:
    - `wallet_addresses[tempo]=<address>` (see the key note below)
    - `lock_wallet_address=true`
    - `destination_networks[]=tempo`, `destination_network=tempo`
@@ -30,7 +32,7 @@ The demo match pool page shows the whole route: card, then USDC on Tempo, then a
    - `destination_amount=<amountUsd>`
    - `customer_ip_address` from `x-forwarded-for`
    It returns `{ clientSecret, redirectUrl }`, like the Base route. The embedded widget, the narrow-screen redirect and the widget-failure fallback are the same component as "Pay by card" (`src/components/pay/StripeOnramp.tsx`).
-3. On `fulfillment_complete` the card shows "Card step done." The webhook ignores Tempo deliveries (`fulfilledTransfer` is Base only), so nothing is recorded as an Artizen payment.
+3. On `fulfillment_complete` the card shows "Card step done." The webhook ignores Tempo deliveries (`fulfilledTransfer` is Base only, and also needs the Base wallet field, so a delivery with no `destination_network` is ignored, not retried), so nothing is recorded as an Artizen payment.
 
 **Wallet key: unverified.** Stripe's API lists `tempo` in the `destination_network(s)` enum, but the CryptoOnrampSession reference does not name the Tempo field in `wallet_addresses` yet. The code guesses `tempo`. If session creation fails with an invalid `wallet_addresses` parameter, change `WALLET_KEYS.tempo` in `app/src/lib/onramp.ts` to `tempo_network` (the Base pattern) and update the Tempo test in `app/test/onramp.test.ts`. One sandbox session is enough to confirm which key Stripe accepts.
 

@@ -2,7 +2,7 @@
 // test-match-pool from Tempo testnet (withLivePool), artizen-give-back from the
 // Supabase line (withLiveLine), and the home tracker from both (computeTotals).
 // Pure: no server imports, safe for client components and tests.
-import { fillPerson, formatCents, formatCentsExact, isExtra, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
+import { fillPerson, formatCents, isExtra, paidFromLine, paymentUnits, shortAddress, type LineEntry, type PaymentRecord } from "./claims";
 import zcashJson from "../content/zcash-pledge.json";
 
 // Tempo testnet addresses (same values as src/lib/tempo.ts; kept here so this file stays import-light).
@@ -117,8 +117,8 @@ export const ARTIZEN_RULE = {
 export function moneyRows(st: LineStats, rule: Pick<typeof ARTIZEN_RULE, "pledged" | "inPlaceCents"> = ARTIZEN_RULE): RuleRow[] {
   return [
     { label: "Pledged", value: rule.pledged },
-    { label: "In place now", value: formatCentsExact(rule.inPlaceCents) },
-    { label: "Paid out so far", value: formatCentsExact(st.paidCents) },
+    { label: "In place now", value: formatCents(rule.inPlaceCents) },
+    { label: "Paid out so far", value: formatCents(st.paidCents) },
     { label: "People in line", value: String(st.people) },
   ];
 }
@@ -179,7 +179,9 @@ function isoDay(iso: string): string {
 const shortTx = (tx: string) => tx.slice(0, 6) + "…" + tx.slice(-4);
 
 export function zcashPledge(d: ZcashPledgeData = ZCASH): Pledge {
-  const inPlace = `${formatZat(d.balanceZat)} (testnet)`;
+  // First use on each surface names the unit in words, never a bare ticker. The balance is a one-time
+  // snapshot from the spike, not a live read, so its label says so.
+  const inPlace = `${formatZat(d.balanceZat)} (Zcash test money)`;
   const checked = isoDay(d.verifiedAt);
   return {
     slug: ZCASH_SLUG,
@@ -189,16 +191,16 @@ export function zcashPledge(d: ZcashPledgeData = ZCASH): Pledge {
     by: { name: "Kept private", initials: "?" },
     chain: d.network,
     stats: [
-      { value: formatZat(d.balanceZat), label: "in place now" },
+      { value: inPlace, label: "in place now (snapshot)" },
       { value: "Private", label: "funder" },
-      { value: shortDate(checked), label: "last checked" },
+      { value: shortDate(checked), label: "checked" },
     ],
     cardStats: [
-      { value: formatZat(d.balanceZat), label: "in place now" },
+      { value: inPlace, label: "in place now (snapshot)" },
       { value: "Private", label: "funder" },
     ],
     inPlace: [
-      { label: "In place now", value: inPlace, ok: true },
+      { label: "In place now (snapshot)", value: inPlace, ok: true },
       { label: "Funder", value: "Private" },
       { label: "Last verified", value: `Block ${d.verifiedBlock.toLocaleString("en-US")}, ${checked}` },
       { label: "Pledge tx", value: shortTx(d.pledgeTx.txid), href: d.explorerTxUrl + d.pledgeTx.txid, note: "The explorer shows the fee only." },
@@ -221,6 +223,7 @@ export function zcashPledge(d: ZcashPledgeData = ZCASH): Pledge {
     howItWorks: [
       `The funder sends money to a private Zcash address. This one holds ${formatZat(d.pledgeTx.amountZat)} of free test money from a testnet faucet.`,
       "The pledge publishes a viewing key. With it, anyone can see what came in, what went out and what is left.",
+      "The key also shows payments going out, including where they went.",
       "The key cannot spend. Only the funder's own wallet can move the money.",
       "Who sent the money stays private. The public explorer shows the fee and nothing else.",
     ],
@@ -401,7 +404,11 @@ export function avatarInitials(label: string): string {
   return letters.slice(0, 2).join("") || "?";
 }
 
-export function computeTotals(pool: PoolTotals | null, line: LineEntry[], payments: PaymentRecord[]): Totals {
+/** A line entry as the server reads it (claims-server loadLineData): the full payout address and the
+ * person's claim fees in claim-time order. Without them the chart falls back to short addresses. */
+type TotalsEntry = LineEntry & { address?: string; personFees?: number[] };
+
+export function computeTotals(pool: PoolTotals | null, line: TotalsEntry[], payments: PaymentRecord[]): Totals {
   // Same capped number as the pledge page; raw payments only feed the chart and the feed.
   const paidCents = paidFromLine(line);
   // Extras (sql/005) are shown on the person's row only; they never count toward any total.
@@ -414,14 +421,21 @@ export function computeTotals(pool: PoolTotals | null, line: LineEntry[], paymen
     byDay.set(day, (byDay.get(day) ?? 0) + cents);
   };
   // Give-backs on the chart use the same capped numbers as the headline: each person's payments,
-  // in time order, fill their entries (fee cap, 99.5% forgiveness), and a day only gains what that adds.
+  // in time order, fill their entries (fee cap, forgiveness within the allowance), and a day only gains what that adds.
+  // Keyed by full address when the server line carries it, so two people sharing a short address stay apart.
+  const full = line.length > 0 && line.every((e) => !!e.address);
+  const keyOf = (address: string) => (full ? address.toLowerCase() : shortAddress(address.toLowerCase()));
   const feesBy = new Map<string, number[]>();
-  for (const e of line) feesBy.set(e.shortAddress, [...(feesBy.get(e.shortAddress) ?? []), e.feeCents]);
+  for (const e of line) {
+    const k = full ? e.address!.toLowerCase() : e.shortAddress;
+    if (e.personFees) feesBy.set(k, e.personFees);
+    else feesBy.set(k, [...(feesBy.get(k) ?? []), e.feeCents]);
+  }
   const credited = (fees: number[], units: bigint) => fillPerson(fees, units).reduce((s, f) => s + f.paidCents, 0);
   const runUnits = new Map<string, bigint>();
   const runCents = new Map<string, number>();
   for (const p of [...counted].sort((a, b) => Date.parse(a.block_time) - Date.parse(b.block_time))) {
-    const who = shortAddress(p.to_address.toLowerCase());
+    const who = keyOf(p.to_address);
     const units = (runUnits.get(who) ?? 0n) + paymentUnits(p.amount_units);
     runUnits.set(who, units);
     const cents = credited(feesBy.get(who) ?? [], units);

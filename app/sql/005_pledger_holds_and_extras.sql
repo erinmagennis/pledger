@@ -27,3 +27,6 @@ create index if not exists pledger_holds_expires_idx on public.pledger_holds (ex
 -- toward paid, owed, totals or public records. Every existing row becomes kind = 'paid'.
 alter table public.pledger_payments
   add column if not exists kind text not null default 'paid' check (kind in ('paid', 'extra'));
+
+-- Tell the Supabase API to pick up the new table and column now, not on its next schema refresh.
+notify pgrst, 'reload schema';

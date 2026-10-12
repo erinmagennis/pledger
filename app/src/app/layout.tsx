@@ -23,6 +23,7 @@ const serif = Newsreader({
 export const metadata: Metadata = {
   title: "Pledger",
   description: "See the money behind every pledge, and know when it lands.",
+  icons: { icon: { url: "/favicon.svg", type: "image/svg+xml" } },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
