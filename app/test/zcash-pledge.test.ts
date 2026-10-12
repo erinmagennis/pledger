@@ -23,7 +23,7 @@ describe("Zcash testnet pledge", () => {
     expect(p).toBeDefined();
     expect(p!.testnet).toBe(true);
     expect(p!.chain).toBe("Zcash testnet");
-    expect(KIND_LABEL[p!.kind]).toBe("Private funder");
+    expect(KIND_LABEL[p!.kind]).toBe("Zcash");
     expect(getPledges().map((x) => x.slug)).toEqual(["test-match-pool", "artizen-give-back", ZCASH_SLUG]);
     expect(p!.inPlace.find((r) => r.label === "In place now (snapshot)")?.value).toBe("0.1239 TAZ (Zcash test money)");
     // No bare ticker on first use: header and home card both name the unit in words.

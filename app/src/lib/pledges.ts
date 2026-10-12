@@ -53,7 +53,7 @@ export const KIND_LABEL: Record<PledgeKind, string> = {
   matching: "Matching",
   prize: "Prize",
   "give-back": "Give-back",
-  private: "Private funder",
+  private: "Zcash",
 };
 
 /** "20 October 2026" to "20 Oct". */

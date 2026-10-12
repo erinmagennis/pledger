@@ -60,7 +60,7 @@ h1 em{font-weight:500}
 
 /* bento */
 section{padding-top:28px;position:relative;z-index:1}
-.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:20px}
 .card{background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow);padding:30px}
 .tracker{grid-column:span 1;display:flex;flex-direction:column}
 .k{font-size:14px;color:var(--soft);display:flex;align-items:center;gap:8px}
@@ -73,12 +73,12 @@ section{padding-top:28px;position:relative;z-index:1}
 .av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;margin-right:8px;vertical-align:middle;flex:none}
 .tone-matching{background:var(--peach)}.tone-prize{background:var(--sage)}.tone-give-back{background:var(--butter)}
 
-.kinds{grid-column:span 2;display:grid;grid-template-columns:1.25fr 1fr;grid-template-rows:1fr 1fr;gap:20px}
+.kinds{grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:20px}
 .kind{border-radius:var(--r-md);padding:28px;position:relative;overflow:hidden}
 .kind h3{font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:14px}
 .kind p{color:var(--soft);margin-top:6px;max-width:30ch}
 .ico{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.75);display:grid;place-items:center}
-.k1{grid-row:span 2;background:linear-gradient(160deg,var(--peach-soft),#fff 70%);box-shadow:var(--shadow)}
+.k1{grid-column:span 2;background:linear-gradient(160deg,var(--peach-soft),#fff 70%);box-shadow:var(--shadow)}
 .k2{background:linear-gradient(160deg,var(--sage-soft),#fff 80%);box-shadow:var(--shadow)}
 .k3{background:linear-gradient(160deg,var(--butter-soft),#fff 80%);box-shadow:var(--shadow)}
 .mini{margin-top:26px;background:#fff;border-radius:var(--r-sm);box-shadow:0 1px 2px rgba(0,0,0,.05),0 6px 16px -10px rgba(0,0,0,.2);padding:14px 16px;font-size:14px}
@@ -158,7 +158,7 @@ svg.i.sm{width:14px;height:14px}
  .wrap{padding:0 16px}.links{display:none}
  .hero{grid-template-columns:1fr;padding:36px 22px 28px}.stage{min-height:340px}
  h1{font-size:50px}.sub{font-size:19px}
- .grid,.kinds,.pledges,.steps,.pgrid{grid-template-columns:1fr}.kinds{grid-column:auto;grid-template-rows:auto}.k1{grid-row:auto}
+ .grid,.kinds,.pledges,.steps,.pgrid{grid-template-columns:1fr}.kinds{grid-column:auto;grid-template-rows:auto}.k1{grid-column:auto}
  .band{padding:36px 22px}.band h2{font-size:30px}.big{font-size:52px}
  .f1{width:min(300px,100%)}
  .phead{padding:32px 22px}.phead h1{font-size:40px}.pstats{gap:28px}.pstats b{font-size:34px}
