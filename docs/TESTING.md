@@ -33,6 +33,9 @@ Run: `cd verify && npx vitest run`
 |---|---|---|
 | 2026-10-12 | Unit tests with locally signed test emails: valid pass, signature from another domain only, edited body, edited recipient, renamed file, line endings, trailing lines, duplicate headers, odd dash formats, missing fee line, outside Season 7, not a receipt, oversized file, self-backed pairing | 55 passed |
 | 2026-10-12 | Live check against a real Artizen "You sold" email (real DNS) | Passed: project, amount and buyer read correctly |
+| 2026-10-12 | Live check against a real Artizen "You collected" buyer receipt (real DNS) | Passed: signature valid, project, 75 artifacts, $750 contribution, $75 endowment fee, $825 total read correctly |
+| 2026-10-12 | Real receipt paired with the real "You sold" email for the same purchase | Marked self-backed; the sold email added no money |
+| 2026-10-12 | Exact duplicate of a real email uploaded again | Same fingerprint, rejected as already claimed |
 
 Two fingerprint bugs found and fixed while testing:
 - Artizen's signature does not cover the Message-ID header, so a fingerprint built from it could be changed by editing that header (a double claim). The fingerprint now uses the signature itself, plus the Message-ID only when the signature covers it.
