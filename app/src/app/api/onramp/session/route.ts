@@ -74,7 +74,12 @@ async function mint(key: string, params: URLSearchParams, network: OnrampNetwork
     return bad("Could not reach Stripe. Try again.", 502);
   }
   const j = await res.json().catch(() => null);
-  if (!res.ok) return bad(friendlyStripeError(j, network), res.status === 400 ? 400 : 502);
+  if (!res.ok) {
+    // Stripe's error code and message name the bad parameter; neither holds a secret.
+    const e = (j as { error?: { code?: string; message?: string; param?: string } } | null)?.error;
+    console.warn("[pledger] stripe onramp error", { status: res.status, code: e?.code, param: e?.param, message: e?.message });
+    return NextResponse.json({ error: friendlyStripeError(j, network), stripeCode: e?.code ?? null }, { status: res.status === 400 ? 400 : 502 });
+  }
 
   return NextResponse.json({ clientSecret: j?.client_secret ?? null, redirectUrl: j?.redirect_url ?? null });
 }
