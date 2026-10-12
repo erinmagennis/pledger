@@ -252,9 +252,9 @@ export function ClaimFlow() {
             <input type="checkbox" checked={noChargeback} onChange={(e) => setNoChargeback(e.target.checked)} required />
             I haven&apos;t reversed or charged back this payment.
           </label>
-<label className="cl-confirm">
+          <label className="cl-confirm">
             <input type="checkbox" checked={notRestricted} onChange={(e) => setNotRestricted(e.target.checked)} required />
-            I haven&apos;t reversed or charged back this payment.
+            I am not located in, or acting for anyone in, Cuba, Iran, North Korea, Syria, Russia, or the Crimea, Donetsk or Luhansk regions.
           </label>
           {error && <p className="cl-error">{error}</p>}
           <div className="cl-row">
