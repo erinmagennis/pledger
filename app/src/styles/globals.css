@@ -75,7 +75,10 @@ section{padding-top:28px;position:relative;z-index:1}
 
 .kinds{grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:20px}
 .kind{border-radius:var(--r-md);padding:28px;position:relative;overflow:hidden}
-.kind h3{font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:14px}
+.kind h3{font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:4px}
+.khead{display:flex;gap:16px;align-items:flex-start}.khead .ico{flex:none}
+.kind .kfoot{font-size:14px;color:var(--soft);margin-top:16px;max-width:none}.kind .kfoot a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.k1 .khead p{max-width:52ch}
 .kind p{color:var(--soft);margin-top:6px;max-width:30ch}
 .ico{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.75);display:grid;place-items:center}
 .k1{grid-column:span 2;background:linear-gradient(160deg,var(--peach-soft),#fff 70%);box-shadow:var(--shadow)}
