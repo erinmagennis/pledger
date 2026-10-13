@@ -5,6 +5,7 @@ import { createHash, createHmac } from "node:crypto";
 import { getAddress, type Address } from "viem";
 import { isMissingSchema } from "./claims-server";
 import { getSupabase } from "./supabase";
+import { FAUCET_DOWN_MSG, faucetDown, isFaucetError, noteFaucet } from "./faucet-status";
 import type { Deployed } from "./selfserve-chain";
 import {
   DEMO_RECIPIENT,
@@ -33,7 +34,7 @@ export function hashIp(ip: string): string {
 export type CreateResult =
   | { status: 200; body: { ok: true; slug: string; address: string; url: string; deployTx: string; depositTx: string } }
   | { status: 400; body: { ok: false; error: string; errors: Invalid["errors"] } }
-  | { status: 429 | 502 | 503; body: { ok: false; error: string } };
+  | { status: 429 | 502 | 503; body: { ok: false; error: string; faucetDown?: true } };
 
 type Deploy = (input: PledgeInput, recipient: Address) => Promise<Deployed>;
 
@@ -44,6 +45,9 @@ export async function createPledge(raw: unknown, ip: string, deploy: Deploy, now
     const first = Object.values(v.errors)[0] ?? "Check the form.";
     return { status: 400, body: { ok: false, error: first, errors: v.errors } };
   }
+
+  // Faucet failed in the last two minutes: say so without asking it again.
+  if (faucetDown(nowMs)) return { status: 503, body: { ok: false, faucetDown: true, error: FAUCET_DOWN_MSG } };
 
   // Storage is required: a pledge page is found by its row. Before sql/008 runs, say so plainly.
   const db = getSupabase();
@@ -71,9 +75,14 @@ export async function createPledge(raw: unknown, ip: string, deploy: Deploy, now
   } catch (e) {
     const msg = e instanceof Error ? ((e as { shortMessage?: string }).shortMessage ?? e.message).split("\n")[0] : "unknown error";
     console.warn("[pledger] selfserve deploy failed", { msg });
+    if (isFaucetError(msg)) {
+      noteFaucet(false, nowMs);
+      return { status: 503, body: { ok: false, faucetDown: true, error: FAUCET_DOWN_MSG } };
+    }
     return { status: 502, body: { ok: false, error: `The pledge could not be set up on Tempo testnet. ${msg}` } };
   }
 
+  noteFaucet(true, nowMs);
   const row = toRow(v.value, { ...d, recipient: d.recipient }, ipHash);
   const ins = await db.from(TABLE).insert(row);
   if (ins.error) {

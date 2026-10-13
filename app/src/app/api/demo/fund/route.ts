@@ -10,6 +10,7 @@ import { createHash, createHmac } from "node:crypto";
 import { isMissingSchema } from "@/lib/claims-server";
 import { getSupabase } from "@/lib/supabase";
 import { TEMPO_RPC, alphaBalance, usd } from "@/lib/tempo";
+import { FAUCET_DOWN_MSG, faucetDown, noteFaucet } from "@/lib/faucet-status";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,12 @@ function hashIp(ip: string): string {
 
 function fail(status: number, error: string) {
   return NextResponse.json({ ok: false, error }, { status });
+}
+
+/** The faucet failed: remember it for two minutes and give the calm message. */
+function faucetFail() {
+  noteFaucet(false);
+  return NextResponse.json({ ok: false, faucetDown: true, error: FAUCET_DOWN_MSG }, { status: 503 });
 }
 
 async function waitForBalance(addr: Address): Promise<bigint> {
@@ -78,6 +85,9 @@ export async function POST(req: NextRequest) {
     return fail(429, `Test money is limited to ${PER_IP} wallets an hour. Try again in about ${waitMin} minutes.`);
   }
 
+  // The faucet failed in the last two minutes: do not ask it again yet.
+  if (faucetDown()) return NextResponse.json({ ok: false, faucetDown: true, error: FAUCET_DOWN_MSG }, { status: 503 });
+
   // Global cap. A missing table (sql/006 not run) or a read error skips it: the demo keeps working.
   const db = getSupabase();
   let logging = false;
@@ -100,14 +110,13 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tempo_fundAddress", params: [address] }),
       cache: "no-store",
     });
-    if (!res.ok) return fail(502, `The Tempo test faucet answered with status ${res.status}. Try again in a minute.`);
+    if (!res.ok) return faucetFail();
     faucet = await res.json();
   } catch {
-    return fail(502, "The Tempo test faucet could not be reached. Try again in a minute.");
+    return faucetFail();
   }
-  if (faucet.error) {
-    return fail(502, `The Tempo test faucet said: ${faucet.error.message ?? "unknown error"}.`);
-  }
+  if (faucet.error) return faucetFail();
+  noteFaucet(true);
 
   hits.push(now);
   ipHits.set(ip, hits);

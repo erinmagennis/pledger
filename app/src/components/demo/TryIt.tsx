@@ -6,6 +6,7 @@ import type { OnrampSessionResult } from "@stripe/crypto";
 import { Icon } from "../Icons";
 import { CryptoElements, getOnramp, NARROW, OnrampElement, PK, TEST_MODE } from "../pay/StripeOnramp";
 import { MATCH_POOL, RECIPIENT_LABEL, txUrl, usd } from "@/lib/tempo";
+import { FAUCET_DOWN_MSG, isFaucetError } from "@/lib/faucet-status";
 import type { GiveResult } from "./give";
 
 const KEY_STORE = "pledger_demo_key";
@@ -53,10 +54,12 @@ export function TryIt({
   const [giveStep, setGiveStep] = useState<"approving" | "donating" | "matched" | null>(null);
   const [result, setResult] = useState<GiveResult | null>(null);
   const [error, setError] = useState<string>("");
+  const [faucetOut, setFaucetOut] = useState(false);
   const [address, setAddress] = useState<Address | null>(null);
 
   async function start() {
     setError("");
+    setFaucetOut(false);
     setPhase("funding");
     try {
       const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
@@ -82,11 +85,19 @@ export function TryIt({
         body: JSON.stringify({ address }),
       });
       const data = await res.json().catch(() => ({}));
+      if (data.faucetDown) {
+        setFaucetOut(true);
+        setError(FAUCET_DOWN_MSG);
+        setPhase("error");
+        return;
+      }
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Test money could not be sent just now.");
       setBalance(data.balance);
       setPhase("ready");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Test money could not be sent just now.");
+      const msg = e instanceof Error ? e.message : "Test money could not be sent just now.";
+      setFaucetOut(isFaucetError(msg));
+      setError(isFaucetError(msg) ? FAUCET_DOWN_MSG : msg);
       setPhase("error");
     }
   }
@@ -133,6 +144,11 @@ export function TryIt({
           </button>
         </div>
       )}
+      {phase === "idle" && !TEMPO_CARD_ENABLED && (
+        <p className="try-note">
+          Card payments are coming to Tempo pools. Today you can pay people back by card on the <a href="/pledges/artizen-give-back">Artizen give-back</a> (test mode).
+        </p>
+      )}
 
       {phase !== "idle" && (
         <ol className="try-steps" aria-live="polite">
@@ -173,7 +189,7 @@ export function TryIt({
       {address && <CardFund address={address} />}
 
       {phase === "error" && (
-        <div className="try-error" role="alert">
+        <div className={faucetOut ? "try-error try-calm" : "try-error"} role={faucetOut ? "status" : "alert"}>
           <p>{error}</p>
           <div className="ctas">
             <button type="button" className="btn btn-ghost" onClick={keyRef.current && balance ? () => setPhase("ready") : start}>

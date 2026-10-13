@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "../Icons";
+import { Icon, type IconName } from "../Icons";
+import { FAUCET_DOWN_MSG } from "@/lib/faucet-status";
 import { useNet } from "@/lib/network";
 import {
   MAX_LOCK_DAYS,
@@ -18,6 +19,13 @@ import {
 
 const RATIO_LABEL: Record<Ratio, string> = { "1:2": "50¢ per $1", "1:1": "$1 per $1", "2:1": "$2 per $1", "3:1": "$3 per $1" };
 const POOL_PICKS = [100, 250, 500];
+
+type Kind = "match" | "prize" | "giveback";
+const KINDS: { id: Kind; icon: IconName; title: string; line: string }[] = [
+  { id: "match", icon: "heart", title: "Matching funds", line: "A pool that matches each gift." },
+  { id: "prize", icon: "trophy", title: "Prize payouts", line: "Winners see the date their prize lands." },
+  { id: "giveback", icon: "undo", title: "Give-backs", line: "Return fees or winnings to the people who paid them." },
+];
 
 function isoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -41,6 +49,20 @@ export function MakeForm() {
   const [recipient, setRecipient] = useState("");
   const [errors, setErrors] = useState<Invalid["errors"]>({});
   const [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState<Kind>("match");
+  const [faucetDown, setFaucetDown] = useState(false);
+
+  useEffect(() => {
+    if (net === "mainnet") return;
+    let live = true;
+    fetch("/api/faucet/status", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { down?: boolean }) => live && setFaucetDown(!!j.down))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [net]);
 
   if (net === "mainnet") {
     return (
@@ -72,6 +94,11 @@ export function MakeForm() {
         body: JSON.stringify(body),
       });
       const j = await res.json().catch(() => ({}));
+      if (j.faucetDown) {
+        setFaucetDown(true);
+        setBusy(false);
+        return;
+      }
       if (!res.ok || !j.ok) {
         setErrors(j.errors ?? { form: j.error ?? "The pledge could not be made just now." });
         setBusy(false);
@@ -86,10 +113,44 @@ export function MakeForm() {
 
   const err = (k: keyof Invalid["errors"]) => errors[k] && <p className="ss-err" role="alert">{errors[k]}</p>;
 
+  const tiles = (
+    <div className="ss-field">
+      <span>1. What kind of pledge?</span>
+      <div className="ss-kinds" role="radiogroup" aria-label="Kind of pledge">
+        {KINDS.map((k) => (
+          <button type="button" role="radio" aria-checked={kind === k.id} key={k.id} className={kind === k.id ? "on" : undefined} onClick={() => setKind(k.id)}>
+            <span className="ss-kind-ic"><Icon name={k.icon} /></span>
+            <b>{k.title}</b>
+            <small>{k.line}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (kind !== "match") {
+    return (
+      <div className="card ss-form">
+        {tiles}
+        <div className="ss-tg" role="status">
+          <h2>We set these up with you.</h2>
+          <p>Prize payouts and give-backs move real money, so we set each one up with you by hand. Message us on Telegram and we will start it together.</p>
+          <div className="ctas">
+            <a className="btn btn-primary" href="https://t.me/erinmagennis">Message us on Telegram<span className="arr"><Icon name="arrow" /></span></a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form className="card ss-form" onSubmit={submit} noValidate>
-      <span className="k"><span className="live" />Runs on Tempo testnet with test money</span>
-      <h2>Set up a match</h2>
+      {tiles}
+      <div className="ss-step">
+        <span className="k"><span className="live" />Runs on Tempo testnet with test money</span>
+        <h2>2. Set up the match</h2>
+      </div>
+      {faucetDown && <p className="ss-calm" role="status">{FAUCET_DOWN_MSG}</p>}
 
       <label className="ss-field">
         <span>Pledge name</span>
@@ -97,6 +158,7 @@ export function MakeForm() {
         {err("name")}
       </label>
 
+      <div className="ss-grid">
       <div className="ss-field">
         <span>Match pool</span>
         <div className="ss-money">
@@ -123,6 +185,7 @@ export function MakeForm() {
           ))}
         </div>
         {err("ratio")}
+      </div>
       </div>
 
       <div className="ss-row">
@@ -166,7 +229,7 @@ export function MakeForm() {
 
       {err("form")}
       <div className="ctas">
-        <button type="submit" className="btn btn-primary" disabled={busy}>
+        <button type="submit" className="btn btn-primary" disabled={busy || faucetDown}>
           {busy ? "Setting it up, about 30 seconds" : "Make this pledge"}
           <span className="arr"><Icon name="arrow" /></span>
         </button>

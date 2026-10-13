@@ -17,6 +17,7 @@ import { EXAMPLE_POOL, feed, howSteps, poolNumbers, type LiveNums } from "@/lib/
 let current: FakeDb | null = null;
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => current?.db ?? null, DB_MISSING: { error: "Database not connected yet" } }));
 const { createPledge, getSelfServe, TABLE } = await import("@/lib/selfserve-server");
+const { resetFaucetStatus } = await import("@/lib/faucet-status");
 
 const NOW = Date.UTC(2026, 9, 13, 12, 0, 0);
 const nowSec = NOW / 1000;
@@ -36,6 +37,7 @@ const deployOk = vi.fn(async (_input: PledgeInput, recipient: `0x${string}`) => 
 beforeEach(() => {
   current = fakeDb({});
   deployOk.mockClear();
+  resetFaucetStatus();
 });
 
 describe("validatePledgeInput", () => {
@@ -173,9 +175,9 @@ describe("createPledge", () => {
   });
 
   it("reports a chain failure as 502 and stores nothing", async () => {
-    const r = await createPledge(good, "1.1.1.1", async () => { throw new Error("The Tempo test faucet answered with status 413."); }, NOW);
+    const r = await createPledge(good, "1.1.1.1", async () => { throw new Error("Deploy reverted: out of gas."); }, NOW);
     expect(r.status).toBe(502);
-    expect((r.body as { error: string }).error).toContain("faucet");
+    expect((r.body as { error: string }).error).toContain("out of gas");
     expect(current!.tables[TABLE] ?? []).toHaveLength(0);
   });
 

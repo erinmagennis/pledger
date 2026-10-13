@@ -203,6 +203,7 @@ svg.i.sm{width:14px;height:14px}
 .try-error{margin-top:18px}
 .try-error p{color:#8a4b2b;background:var(--peach-soft);border-radius:var(--r-sm);padding:12px 14px;font-size:15px}
 .try-error .ctas{margin-top:14px}
+.try-calm p{color:#5e4d17;background:var(--butter-soft)}
 /* Card step of the demo route (TryIt CardFund); claim.css is not loaded on this page */
 .try-card{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
 .try-card-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
