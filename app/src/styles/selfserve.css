@@ -1,0 +1,109 @@
+/* Self-serve pledges (/make) and the shared match pool template. Tokens from tokens.css only. */
+
+/* ---------- one test-money banner per pool page ---------- */
+.ss-banner{display:flex;align-items:center;gap:12px;margin-top:8px;padding:12px 16px;border-radius:var(--r-sm);background:var(--butter-soft);box-shadow:inset 0 0 0 1px rgba(122,100,32,.14);color:#5e4d17;font-size:15px}
+.ss-banner p{margin:0}.ss-banner b{font-weight:600}
+.ss-banner-ic{width:30px;height:30px;border-radius:50%;background:#fff;display:grid;place-items:center;flex:none;color:#7a6420}
+
+.ss-share{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px 10px 16px;border-radius:var(--r-sm);background:var(--card);box-shadow:var(--shadow-soft);flex-wrap:wrap}
+.ss-share-k{font-size:14px;color:var(--soft);font-weight:600}
+.ss-share input{flex:1;min-width:180px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;color:var(--ink);background:var(--ground)}
+
+/* ---------- pool stats: big number, meter, tiles, facts ---------- */
+.ss-stats .ss-big{margin-top:16px;display:flex;flex-direction:column;gap:2px}
+.ss-big b{font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1.05}
+.ss-big small{color:var(--soft);font-size:15px}
+.ss-meter{margin-top:16px;height:12px;border-radius:999px;background:var(--sage-soft);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.ss-meter i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent-2),var(--accent))}
+.ss-legend{display:flex;gap:18px;margin-top:10px;font-size:13.5px;color:var(--soft);flex-wrap:wrap}
+.ss-legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block}.sw.used{background:var(--accent)}.sw.left{background:var(--sage)}
+.ss-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.ss-tile{background:var(--ground);border-radius:var(--r-sm);padding:12px 12px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ss-tile b{font-size:20px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-tile small{font-size:12.5px;color:var(--soft)}
+.ss-facts{margin:18px 0 0;padding:0;display:grid;gap:0;font-size:14px}
+.ss-facts div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;align-items:center}
+.ss-facts div+div{border-top:1px solid var(--line)}
+.ss-facts dt{color:var(--soft)}
+.ss-facts dd{margin:0;text-align:right;font-weight:500}
+.ss-facts a{color:var(--accent);font-weight:600;text-underline-offset:3px;display:inline-flex;min-height:32px;align-items:center}
+
+/* ---------- activity feed ---------- */
+.ss-feed{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:4px}
+.ss-feed li{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;padding:8px 8px;border-radius:var(--r-sm)}
+.ss-feed li:hover{background:var(--ground)}
+.ss-av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink)}
+.ss-av-ic{background:var(--butter-soft);color:#7a6420}
+.ss-feed-main{display:flex;flex-direction:column;min-width:0}
+.ss-feed-main a{color:var(--ink);text-decoration:none;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-feed-main a:hover{text-decoration:underline;text-underline-offset:3px}
+.ss-feed-main small{color:var(--faint);font-size:13px}
+.ss-match{font-size:12.5px}
+.ss-empty,.ss-more{color:var(--soft);margin-top:12px;font-size:15px}
+
+/* ---------- how it works: numbered icon steps ---------- */
+.ss-how{list-style:none;padding:0;margin:18px 0 0;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.ss-how li{background:var(--ground);border-radius:var(--r-sm);padding:16px}
+.ss-how-ic{position:relative;width:40px;height:40px;border-radius:12px;background:var(--card);display:grid;place-items:center;color:var(--accent);box-shadow:var(--shadow-soft)}
+.ss-how-ic em{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-style:normal;font-size:11.5px;font-weight:700;display:grid;place-items:center}
+.ss-how h3{font-size:16.5px;font-weight:600;margin-top:12px;letter-spacing:-.01em}
+.ss-how p{color:var(--soft);font-size:14.5px;margin-top:4px;line-height:1.45}
+
+/* ---------- /make ---------- */
+.hero.ss-make{grid-template-columns:1fr minmax(0,470px);align-items:start;padding:56px 48px}
+.ss-make-copy h1{margin-top:8px}
+.ss-make-copy .sub{max-width:24ch}
+.ss-points{list-style:none;padding:0;margin:26px 0 0;display:grid;gap:10px}
+.ss-points li{display:flex;align-items:center;gap:10px;font-size:16px}
+.ss-points li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 0 4px rgba(44,106,80,.14);flex:none}
+.ss-form{padding:26px}
+.ss-form h2{margin-top:8px}
+.ss-field{display:flex;flex-direction:column;gap:7px;margin-top:16px;min-width:0}
+.ss-field>span{font-size:14px;font-weight:600}
+.ss-field small{color:var(--soft);font-size:13px}
+.ss-form input:not([type=radio]){font:inherit;font-size:16px;color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:12px;padding:11px 13px;width:100%;min-height:46px}
+.ss-form input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ss-money{position:relative}
+.ss-money i{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--soft)}
+.ss-form .ss-money input{padding-left:26px}
+.ss-picks{display:flex;gap:6px}
+.ss-picks button,.ss-seg button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font-size:14px;color:var(--ink);min-height:36px}
+.ss-picks button.on,.ss-seg button.on{background:var(--sage-soft);border-color:rgba(47,90,62,.35);color:#2f5a3e;font-weight:600}
+.ss-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ss-seg button{border-radius:var(--r-sm);display:flex;flex-direction:column;align-items:center;padding:8px 4px;gap:1px}
+.ss-seg b{font-size:16px}.ss-seg small{font-size:11.5px;color:var(--soft)}
+.ss-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ss-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ss-choice label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px;cursor:pointer;background:var(--card)}
+.ss-choice label.on{border-color:rgba(47,90,62,.35);background:var(--sage-soft)}
+.ss-choice input{margin-top:4px;accent-color:var(--accent)}
+.ss-choice b{display:block;font-size:14.5px}
+.ss-form .ss-addr{margin-top:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px}
+.ss-preview{display:flex;gap:10px;align-items:flex-start;margin-top:18px;padding:12px 14px;border-radius:var(--r-sm);background:var(--peach-soft);color:#6d3d22;font-size:14.5px}
+.ss-preview p{margin:0}.ss-preview svg{margin-top:3px;flex:none}
+.ss-form .ctas{margin-top:20px}
+.ss-form button[disabled]{opacity:.7;cursor:progress}
+.ss-err{color:#a2402a;font-size:13.5px;margin:0}
+.ss-fine{color:var(--faint);font-size:13px;margin-top:14px}
+.ss-mainnet h2{font-size:24px}
+.ss-mainnet p{color:var(--soft);margin-top:6px}
+.ss-funder{margin-top:20px;display:flex;justify-content:space-between;align-items:center;gap:24px;background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow-soft);padding:26px 30px;flex-wrap:wrap}
+.ss-funder h2{font-size:22px;font-weight:600;letter-spacing:-.015em}
+.ss-funder p{color:var(--soft);margin-top:6px;max-width:56ch}
+.ss-funder .ctas{margin-top:0}
+
+@media(max-width:900px){
+  .hero.ss-make{grid-template-columns:1fr;padding:32px 18px;gap:24px}
+  .ss-how{grid-template-columns:1fr}
+  .ss-funder{padding:22px}
+}
+@media(max-width:480px){
+  .ss-row,.ss-choice{grid-template-columns:1fr}
+  .ss-seg{grid-template-columns:repeat(2,1fr)}
+  .ss-form{padding:20px 16px}
+  .ss-big b{font-size:38px}
+  .ss-feed-main a{white-space:normal}
+  .ss-feed li{grid-template-columns:36px 1fr;row-gap:4px}
+  .ss-feed li>.chip{grid-column:2;justify-self:start}
+}

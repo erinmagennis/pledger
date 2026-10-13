@@ -5,7 +5,7 @@ import type { Address, Hex } from "viem";
 import type { OnrampSessionResult } from "@stripe/crypto";
 import { Icon } from "../Icons";
 import { CryptoElements, getOnramp, NARROW, OnrampElement, PK, TEST_MODE } from "../pay/StripeOnramp";
-import { RECIPIENT_LABEL, txUrl, usd } from "@/lib/tempo";
+import { MATCH_POOL, RECIPIENT_LABEL, txUrl, usd } from "@/lib/tempo";
 import type { GiveResult } from "./give";
 
 const KEY_STORE = "pledger_demo_key";
@@ -33,7 +33,19 @@ function saveKey(k: Hex) {
   }
 }
 
-export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
+export function TryIt({
+  onGiven,
+  pool = MATCH_POOL,
+  recipientLabel = RECIPIENT_LABEL,
+  capLabel = "$20",
+}: {
+  onGiven: (r: GiveResult) => void;
+  /** The MatchPool to give to; defaults to the example pool. */
+  pool?: `0x${string}`;
+  recipientLabel?: string;
+  /** Per-donor match cap, for the "already used" message. */
+  capLabel?: string;
+}) {
   const keyRef = useRef<Hex | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [balance, setBalance] = useState<string>("");
@@ -87,7 +99,7 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
     setGiveStep("approving");
     try {
       const { give, balanceOf } = await import("./give");
-      const r = await give(key, amount, (s) => setGiveStep(s));
+      const r = await give(key, amount, (s) => setGiveStep(s), pool);
       setGiveStep("matched");
       setResult(r);
       onGiven(r);
@@ -107,10 +119,10 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
 
   return (
     <div className="card try" id="try">
-      <span className="k"><span className="live" />Demo match pool, test money only</span>
+      <span className="k"><span className="live" />No login, no wallet</span>
       <h2 style={{ marginTop: 8 }}>See a match happen</h2>
       <p className="try-sub">
-        Give test money to {RECIPIENT_LABEL} and watch the pool match it. No login, no wallet. About a minute.
+        Give test money to {recipientLabel} and watch the pool match it. It takes about a minute.
       </p>
 
       {phase === "idle" && (
@@ -155,7 +167,7 @@ export function TryIt({ onGiven }: { onGiven: (r: GiveResult) => void }) {
         </>
       )}
 
-      {phase === "done" && result && <Result r={result} onAgain={() => { setResult(null); setGiveStep(null); setPhase("ready"); }} />}
+      {phase === "done" && result && <Result r={result} recipientLabel={recipientLabel} capLabel={capLabel} onAgain={() => { setResult(null); setGiveStep(null); setPhase("ready"); }} />}
 
       {/* Stays mounted through "Try again" (which refunds from the faucet), so a card session in progress is kept. */}
       {address && <CardFund address={address} />}
@@ -264,7 +276,7 @@ function CardFund({ address }: { address: Address }) {
   );
 }
 
-function Result({ r, onAgain }: { r: GiveResult; onAgain: () => void }) {
+function Result({ r, recipientLabel, capLabel, onAgain }: { r: GiveResult; recipientLabel: string; capLabel: string; onAgain: () => void }) {
   const gave = usd(r.amountUnits);
   const matched = r.matchUnits > 0n;
   const total = usd(r.amountUnits + r.matchUnits);
@@ -272,11 +284,11 @@ function Result({ r, onAgain }: { r: GiveResult; onAgain: () => void }) {
     <div className="mini try-result">
       {matched ? (
         <p>
-          You gave <b>{gave}</b>. The pool matched <b>{usd(r.matchUnits)}</b>. <b>{total}</b> went to {RECIPIENT_LABEL}.
+          You gave <b>{gave}</b>. The pool matched <b>{usd(r.matchUnits)}</b>. <b>{total}</b> went to {recipientLabel}.
         </p>
       ) : (
         <p>
-          You gave <b>{gave}</b>, and it went to {RECIPIENT_LABEL}. Your $20 match was already used.
+          You gave <b>{gave}</b>, and it went to {recipientLabel}. Your {capLabel} of match was already used.
         </p>
       )}
       <p className="try-proof">

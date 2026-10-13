@@ -1,20 +1,18 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icons";
 import { LivePoolView } from "@/components/demo/LivePoolView";
 import { MainnetOnly } from "@/components/NetSwitch";
-import { getPledge } from "@/lib/pledges";
+import { EXAMPLE, EXAMPLE_POOL } from "@/lib/poolview";
 import { readPool, type PoolData } from "@/lib/tempo";
+import "@/styles/selfserve.css";
 
 // Live pool data from Tempo testnet, refreshed about every 10 seconds.
 export const revalidate = 10;
 
-export const metadata: Metadata = { title: "Demo match pool · Pledger" };
+export const metadata: Metadata = { title: `${EXAMPLE.title} · Pledger` };
 
 export default async function TestMatchPoolPage() {
-  const base = getPledge("test-match-pool");
-  if (!base) notFound();
   let initial: PoolData | null = null;
   try {
     initial = await readPool();
@@ -30,7 +28,15 @@ export default async function TestMatchPoolPage() {
           <p>Mainnet pool: coming. The sponsor deploys it with $0 in place; anyone can fork the verified contract.</p>
         </div>
       </MainnetOnly>
-      <LivePoolView base={base} initial={initial} />
+      <LivePoolView
+        cfg={EXAMPLE_POOL}
+        initial={initial}
+        api="/api/pools/test-match-pool"
+        title={EXAMPLE.title}
+        by={EXAMPLE.by}
+        sub={EXAMPLE.sub}
+        example
+      />
     </>
   );
 }
