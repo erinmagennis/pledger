@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icons";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
-import { ActivityCard, BackersSection, ClaimSection, HowBand, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
+import { ActivityCard, BackersSection, HowBand, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
 import { LineCard } from "@/components/claim/LineCard";
 import { ZcashVerify } from "@/components/pledge/ZcashVerify";
 import { ZcashNetworkView } from "@/components/pledge/ZcashNetworkView";
@@ -11,6 +11,15 @@ import { getLineData } from "@/lib/live";
 import { ZCASH, ZCASH_MAINNET, ZCASH_SLUG, getPledge, getPledges, lineStats, withLiveLine, zcashMainnetRisks, zcashPledge, type ZcashPledgeData } from "@/lib/pledges";
 
 type Params = { slug: string };
+
+/** The Artizen give-back rule, one short line each. Shown once, in the header. */
+const GIVE_BACK_FACTS: [string, string][] = [
+  ["Who pledges", "Erin Magennis"],
+  ["What", "50% of her Colosseum winnings (prize not yet decided)"],
+  ["Who gets it", "Season 7 backers who paid the 10% fee"],
+  ["Order", "Self-backers first, then smallest claims"],
+  ["When", "Within 14 days of the prize arriving, then weekly until used up"],
+];
 
 // Live line numbers for the give-back. Refreshed about every 30 seconds.
 export const revalidate = 30;
@@ -47,19 +56,22 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
                 Artizen promised match funding on every purchase and charged backers a 10% endowment fee. In October
                 2026 it shut down. There is no sign the promised match will be paid or the fees returned.{" "}
                 <a className="gb4-src" href="https://payout-progress-artizen.pages.dev/" target="_blank" rel="noopener noreferrer">
-                  Source: community payout tracker
+                  Source: Artizen Payout Tracker, run by the community (not Pledger)
                 </a>
-                <span className="gb4-for">
-                  This pledge puts half of my Colosseum winnings toward paying that fee back to Season 7 backers.
-                </span>
               </>
+            }
+            extra={
+              <ul className="gb4-facts" aria-label="The pledge">
+                {GIVE_BACK_FACTS.map(([k, v]) => (
+                  <li key={k}><span>{k}</span>{v}</li>
+                ))}
+              </ul>
             }
             doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/claim" }]}
           />
         </div>
         <HowBand />
         <BackersSection stats={st} />
-        <ClaimSection />
         <section className="gb-sec" aria-labelledby="gb-line">
           <SectionHead id="gb-line" title="The line" />
           <LineCard initial={st} />
