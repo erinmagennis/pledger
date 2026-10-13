@@ -18,9 +18,9 @@ const STEPS = [
       "A give-back claim starts with the receipt email. Pledger checks its DKIM signature from artizen.fund, so an edited or made-up email fails, and each receipt can be claimed once.",
   },
   {
-    text: "Payments land and are recorded in public. Give-backs can also be paid by card, in test mode for now.",
+    text: "Payments land and are recorded in public.",
     detail:
-      "Give-backs are paid in USDC on Base, and Pledger reads each payment from the chain before it counts. People in the give-back line can choose a card payout through Stripe instead. Paid claims get a public record on Base through EAS. In the demo, the gift and its match reach the project together, in one Tempo transaction.",
+      "Give-backs are paid in USDC on Base, and Pledger reads each payment from the chain before it counts. Anyone paying people back can also pay by card through Stripe, in test mode for now. Paid claims get a public record on Base through EAS. In the demo, the gift and its match reach the project together, in one Tempo transaction.",
   },
 ];
 

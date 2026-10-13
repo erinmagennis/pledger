@@ -139,7 +139,7 @@ export function ClaimFlow() {
           {address ? shortAddress(address) : "your wallet"} in USDC on Base.
         </p>
         <div className="ctas" style={{ marginTop: 22 }}>
-          <Link className="btn btn-primary" href="/pledges/artizen/line">
+          <Link className="btn btn-primary" href="/pledges/artizen#line">
             See the line<span className="arr"><Icon name="arrow" /></span>
           </Link>
         </div>
@@ -176,7 +176,7 @@ export function ClaimFlow() {
         )}
         {!isConnected && (
           <p className="cl-soft">
-            Browser wallet works with MetaMask, Rabby, Rainbow and similar. WalletConnect shows a QR code for a phone wallet.
+            Use a browser extension like MetaMask, Rabby or Rainbow. WalletConnect shows a QR code for a phone wallet.
             No wallet? Coinbase Wallet can create one.
           </p>
         )}
@@ -188,7 +188,7 @@ export function ClaimFlow() {
         <h2>Add your Artizen emails</h2>
         <ul className="cl4-emails">
           <li><b>Needed:</b> your receipt, &ldquo;You collected&hellip;&rdquo;. It proves you paid and shows the fee you can claim.</li>
-          <li><b>Backed your own project?</b> Add the sale email, &ldquo;You sold&hellip;&rdquo;. It proves the purchase was on your own project, so that claim goes first in line.</li>
+          <li><b>Backed your own project?</b> Add the sale email, &ldquo;You sold&hellip;&rdquo;. It proves the purchase was on your own project, so that claim moves to the front of the line.</li>
         </ul>
         <label
           className={`cl-drop${dragOn ? " on" : ""}`}
@@ -328,7 +328,7 @@ function AfterStep({ n }: { n: number }) {
           </div>
         </li>
       </ul>
-      <Link className="cl4-line-link" href="/pledges/artizen/line">See the line<Icon name="arrow" small /></Link>
+      <Link className="cl4-line-link" href="/pledges/artizen#line">See the line<Icon name="arrow" small /></Link>
     </div>
   );
 }

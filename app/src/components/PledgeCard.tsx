@@ -31,7 +31,7 @@ export function PledgeCard({ pledge, action }: { pledge: Pledge; action?: React.
           {pledge.by.name}
         </span>
         <span className="chips">
-          {testMoney ? <span className="chip demo">Test money</span> : <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span>}
+          {testMoney ? <span className="chip demo">Test money</span> : <><span className="chip live-chip"><span className="live" />Live</span><span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span></>}
         </span>
       </div>
       <h3>{pledge.title}</h3>

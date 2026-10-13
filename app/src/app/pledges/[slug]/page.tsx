@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Icon } from "@/components/Icons";
+import { Icon, type IconName } from "@/components/Icons";
+import { Button } from "@/components/Button";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
-import { ActivityCard, BackersSection, HowBand, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
-import { LineCard } from "@/components/claim/LineCard";
+import { ActivityCard, BackersSection, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
+import { LineWithPay } from "@/components/claim/LinePage";
+import { WalletProvider } from "@/components/providers/WagmiProvider";
 import { ZcashVerify } from "@/components/pledge/ZcashVerify";
 import { ZcashNetworkView } from "@/components/pledge/ZcashNetworkView";
 import { getLineData } from "@/lib/live";
@@ -13,12 +15,12 @@ import { ZCASH, ZCASH_MAINNET, ZCASH_SLUG, getPledge, getPledges, lineStats, wit
 type Params = { slug: string };
 
 /** The Artizen give-back rule, one short line each. Shown once, in the header. */
-const GIVE_BACK_FACTS: [string, string][] = [
-  ["Who pledges", "Erin Magennis"],
-  ["What", "50% of her Colosseum winnings (prize not yet decided)"],
-  ["Who gets it", "Season 7 backers who paid the 10% fee"],
-  ["Order", "Self-backers first, then smallest claims"],
-  ["When", "Within 14 days of the prize arriving, then weekly until used up"],
+const GIVE_BACK_FACTS: [IconName, string, string][] = [
+  ["user", "Who pledges", "Erin Magennis"],
+  ["trophy", "What", "50% of her Colosseum winnings (prize not yet decided)"],
+  ["heart", "Who gets it", "Season 7 backers who paid the 10% fee"],
+  ["list", "Order", "Self-backers first, then smallest claims"],
+  ["coin", "When", "Within 14 days of the prize arriving, then weekly until used up"],
 ];
 
 // Live line numbers for the give-back. Refreshed about every 30 seconds.
@@ -62,19 +64,25 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
             }
             extra={
               <ul className="gb4-facts" aria-label="The pledge">
-                {GIVE_BACK_FACTS.map(([k, v]) => (
-                  <li key={k}><span>{k}</span>{v}</li>
+                {GIVE_BACK_FACTS.map(([icon, k, v]) => (
+                  <li key={k}>
+                    <span className="gb4-fi"><Icon name={icon} small /></span>
+                    <span className="gb4-fk">{k}</span>
+                    <span className="gb4-fv">{v}</span>
+                  </li>
                 ))}
               </ul>
             }
             doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/pledges/artizen/claim" }]}
           />
         </div>
-        <HowBand />
-        <BackersSection stats={st} />
-        <section className="gb-sec" aria-labelledby="gb-line">
+        <BackersSection />
+        <section className="gb-sec gb4-line" id="line" aria-labelledby="gb-line">
           <SectionHead id="gb-line" title="The line" />
-          <LineCard initial={st} />
+          {/* Wallet only here, for paying people in line. */}
+          <WalletProvider>
+            <LineWithPay initial={st} />
+          </WalletProvider>
         </section>
         <ProofStrip pledge={pledge} />
       </>
@@ -136,6 +144,7 @@ function ZcashBody({ d }: { d: ZcashPledgeData }) {
         pledge={pledge}
         hideBy
         sub="The money is visible to anyone with the viewing key. Who gave it is not. The key cannot spend."
+        extra={<p className="zc-for">For funders who want to stay anonymous while anyone can still check the money.</p>}
       />
       <section className="pgrid">
         <div className="pcol">
@@ -160,6 +169,13 @@ function ZcashBody({ d }: { d: ZcashPledgeData }) {
           )}
         </div>
       </section>
+      <div className="card zc-next">
+        <div>
+          <h2>Want to pledge privately?</h2>
+          <Link className="zc-next-alt" href="/pledges/artizen">See a public pledge<Icon name="arrow" small /></Link>
+        </div>
+        <Button href="https://t.me/erinmagennis">Talk to us</Button>
+      </div>
     </>
   );
 }

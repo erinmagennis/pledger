@@ -8,26 +8,19 @@
 .gb4-head .door{flex-direction:row;align-items:center;gap:16px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 22px}
 .gb4-head .door-k{font-size:16px;color:var(--ink);line-height:1}
 
-/* how this pledge works: the page's one green band */
-.band.gb4-band{margin-top:28px;padding:48px 56px}
-.gb4-band h2{font-size:32px;position:relative;z-index:1}
-.gb4-steps{list-style:none;padding:0;margin-top:28px}
-.gb4-steps .step{display:flex;flex-direction:column}
-.gb4-steps .step h3{font-size:19px;font-weight:600;color:#fff;margin-top:6px;letter-spacing:-.01em}
-.gb4-steps .step p{font-size:16px;margin-top:6px}
-.gb4-band-link{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;margin-top:24px;font-size:14px;font-weight:600;color:var(--peach);text-decoration:none}
-.gb4-band-link:hover{text-decoration:underline}
-
-/* who's backing it: funder card + invite, then the rule as tiles */
-.gb4-back{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:stretch}
-.gb4-money{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}
+/* who's backing it: funder card + a compact invite sized to its content */
+.gb4-back{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
 .gb4-tile{background:#fff;border-radius:var(--r-sm);box-shadow:var(--shadow-soft);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .gb4-tile small,.gb4-tile dt{font-size:13px;color:var(--soft)}
 .gb4-tile b{font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
 .gb4-tile dd{margin:0;font-size:15px;line-height:1.45;color:var(--ink)}
-.gb4-live{margin-top:10px;font-size:13px}
 .gb4-funder .gb-note{margin-top:20px}
-.gb4-invite p{color:var(--soft);margin-top:8px}
+.gb4-invite{padding:22px 24px}
+.gb4-invite-top{display:flex;align-items:center;gap:12px}
+.gb4-invite-top .ico{width:34px;height:34px;border-radius:10px;flex:none}
+.gb4-invite-top h3{margin-top:0}
+.gb4-invite p{color:var(--soft);margin-top:10px;font-size:15px}
+.gb4-invite .gb-invite-cta{margin-top:0;padding-top:16px}
 .gb4-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 0}
 .gb4-tiles .gb4-tile{background:var(--ground);box-shadow:none;border:1px solid var(--line)}
 .gb4-tiles .s2{grid-column:span 2}
@@ -47,11 +40,7 @@
 .cl4-line-link:hover{text-decoration:underline}
 
 @media(max-width:900px){
- .band.gb4-band{padding:32px 22px}
- .gb4-band h2{font-size:26px}
- .gb4-steps{grid-template-columns:1fr;gap:12px}
  .gb4-back{grid-template-columns:1fr}
- .gb4-money{grid-template-columns:repeat(2,minmax(0,1fr))}
  .gb4-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:600px){
@@ -61,9 +50,24 @@
  .gb4-tiles .s2{grid-column:auto}
 }
 
-/* header facts: the rule, once, as short lines */
-.gb4-facts{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:6px;max-width:60ch;font-size:16px;color:var(--ink)}
-.gb4-facts li{display:grid;grid-template-columns:120px 1fr;gap:12px}
-.gb4-facts li span{color:var(--soft);font-size:14px;font-weight:600}
-@media (max-width:560px){.gb4-facts li{grid-template-columns:1fr;gap:0}}
+/* header facts: the rule, once, as compact fact rows with small icons */
+.gb4-facts{list-style:none;padding:0;margin:20px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:760px}
+.gb4-facts li{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:10px;align-items:start;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
+.gb4-facts li:last-child:nth-child(odd){grid-column:1/-1}
+.gb4-fi{grid-row:span 2;width:28px;height:28px;border-radius:50%;background:var(--sage-soft);color:var(--accent);display:grid;place-items:center}
+.gb4-fk{font-size:12.5px;font-weight:600;color:var(--soft);line-height:1.3}
+.gb4-fv{font-size:15px;line-height:1.4;color:var(--ink)}
+@media (max-width:560px){.gb4-facts{grid-template-columns:1fr}}
+
+/* the line, on the pledge page: numbers once, then paying, then everyone */
+.linecard.lc-strip{padding:22px 34px}
+.lc-strip .lc-top{padding-bottom:0;border-bottom:0}
+@media (max-width:600px){.linecard.lc-strip{padding:18px 22px}}
+
+/* zcash: who it is for, and a next step at the bottom */
+.zc-for{margin-top:12px;max-width:60ch;font-size:16px;font-weight:600;color:var(--ink)}
+.zc-next{margin-top:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px 24px}
+.zc-next h2{margin:0}
+.zc-next-alt{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:15px;font-weight:600;color:var(--accent);text-decoration:none}
+.zc-next-alt:hover{text-decoration:underline}
 .cl-row .btn svg{margin-right:8px;vertical-align:-2px}

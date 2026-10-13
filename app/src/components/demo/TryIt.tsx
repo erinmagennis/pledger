@@ -144,11 +144,6 @@ export function TryIt({
           </button>
         </div>
       )}
-      {phase === "idle" && !TEMPO_CARD_ENABLED && (
-        <p className="try-note">
-          Card payments are coming to Tempo pools. Today you can pay people back by card on the <a href="/pledges/artizen">Artizen give-back</a> (test mode).
-        </p>
-      )}
 
       {phase !== "idle" && (
         <ol className="try-steps" aria-live="polite">

@@ -1,6 +1,6 @@
 import { Button } from "../Button";
 import { Icon } from "../Icons";
-import { moneyRows, type LineStats, type Pledge } from "@/lib/pledges";
+import type { Pledge } from "@/lib/pledges";
 
 export function InPlaceCard({ pledge }: { pledge: Pledge }) {
   return (
@@ -66,35 +66,8 @@ export function SectionHead({ id, title }: { id: string; title: string }) {
   return <h2 id={id} className="gb-h">{title}</h2>;
 }
 
-const HOW: { title: string; text: string }[] = [
-  { title: "I pledge, anyone can add", text: "Half my winnings, plus anything others send." },
-  { title: "If I win, payouts start", text: "Nothing is locked before then." },
-  { title: "Money goes down the line", text: "In line order, straight to wallets." },
-];
-
-/** How this pledge works: a 1-2-3 band. Artizen give-back page only. */
-export function HowBand() {
-  return (
-    <section className="band gb4-band" aria-labelledby="gb-how">
-      <h2 id="gb-how">How this pledge works</h2>
-      <ol className="steps gb4-steps">
-        {HOW.map((h, i) => (
-          <li className="step" key={h.title}>
-            <span className="n">{i + 1}</span>
-            <h3>{h.title}</h3>
-            <p>{h.text}</p>
-          </li>
-        ))}
-      </ol>
-      <a className="gb4-band-link" href="/pledges/demo">
-        See a pledge funded up front (test money)<Icon name="arrow" small />
-      </a>
-    </section>
-  );
-}
-
-/** Who's backing it: Erin's funder card with live money tiles and her note, an open slot to help, the line's money tiles once. */
-export function BackersSection({ stats }: { stats: LineStats }) {
+/** Who's backing it: Erin's funder card with her note, and a compact card to help. The numbers live in the line section. */
+export function BackersSection() {
   return (
     <section className="gb-sec" aria-labelledby="gb-backers">
       <SectionHead id="gb-backers" title="Who's backing it" />
@@ -105,15 +78,6 @@ export function BackersSection({ stats }: { stats: LineStats }) {
             <b>Erin Magennis</b>
             <span className="chip gb-pledged">Pledged</span>
           </div>
-          <div className="gb4-money" aria-label="Money in place">
-            {moneyRows(stats).map((r) => (
-              <div className="gb4-tile" key={r.label}>
-                <small>{r.label}</small>
-                <b>{r.value}</b>
-              </div>
-            ))}
-          </div>
-          <span className="k gb4-live"><span className="live" />Live from the line</span>
           {/* TODO(copy): placeholder note. Erin to replace with her own words. */}
           <div className="gb-note">
             <span className="gb-note-k">Why I&apos;m doing this</span>
@@ -125,11 +89,13 @@ export function BackersSection({ stats }: { stats: LineStats }) {
           </div>
         </article>
         <article className="gb-invite gb4-invite">
-          <span className="ico"><Icon name="plus" /></span>
-          <h3>Back it too</h3>
+          <div className="gb4-invite-top">
+            <span className="ico"><Icon name="plus" /></span>
+            <h3>Back it too</h3>
+          </div>
           <p>Pay by card (Stripe, test mode for now) or with USDC on Base. The money goes straight to people in line.</p>
           <div className="gb-invite-cta">
-            <Button href="/pledges/artizen/line#help" variant="ghost">Help pay people back</Button>
+            <Button href="/pledges/artizen#help" variant="ghost">Help pay people back</Button>
           </div>
         </article>
       </div>

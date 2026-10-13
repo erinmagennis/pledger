@@ -12,12 +12,7 @@ export default function MakePage() {
     <main>
       <section className="ss-make-head">
         <h1>Make a <em>pledge</em>.</h1>
-        <p className="sub">Pick the kind of pledge, set the rule once, and get your own page to share. Matches run now with test money.</p>
-        <ul className="ss-points">
-          <li>Locked until the date you pick</li>
-          <li>Every gift and match public on Tempo</li>
-          <li>Your own page to share</li>
-        </ul>
+        <p className="sub">Choose the type, fill in the rule, and you get a page to share. Matching pledges work on Tempo testnet today.</p>
       </section>
       <section className="ss-make-main">
         <MakeForm />

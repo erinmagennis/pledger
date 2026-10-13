@@ -47,3 +47,5 @@
   #live+.pledges{grid-template-columns:1fr}
   .band-note{font-size:15px}
 }
+.chip.live-chip{display:inline-flex;align-items:center;gap:6px;background:var(--sage-soft,#e6efe3);color:var(--ink,#1f2a24)}
+.chips{display:inline-flex;gap:6px}

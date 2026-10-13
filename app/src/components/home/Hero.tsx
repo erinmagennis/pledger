@@ -12,7 +12,7 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
   return (
     <header className="hero">
       <div>
-        <span className="eyebrow"><span className="live" />Every payment confirmed on the blockchain before it counts</span>
+        <span className="eyebrow"><span className="live" />A payment only counts once it is verified onchain</span>
         <h1>Pledges you can <em>trust</em>.</h1>
         <p className="sub">See the money behind every pledge, and know when it will land.</p>
         <div className="ctas">
