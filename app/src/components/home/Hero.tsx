@@ -12,9 +12,9 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
   return (
     <header className="hero">
       <div>
-        <span className="eyebrow"><span className="live" />Every payment checked on chain</span>
+        <span className="eyebrow"><span className="live" />Every payment confirmed on the blockchain before it counts</span>
         <h1>Pledges you can <em>trust</em>.</h1>
-        <p className="sub">See the money behind every pledge, and know when it lands.</p>
+        <p className="sub">See the money behind every pledge, and know when it will land.</p>
         <div className="ctas">
           <Button href="/make">Make a pledge</Button>
           <Button href="/pledges/test-match-pool" variant="ghost">Try the demo</Button>
@@ -26,13 +26,13 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
           <div className="float f2">
             <span className="ic"><Icon name="check" /></span>
             <div>
-              <b>{matched ? `Demo: ${latest.match} matched with test money` : `Demo: ${latest.amount} given with test money`}</b>
-              <small><TimeAgo unix={latest.time} renderedAt={pool.fetchedAt} /> · checked</small>
+              <b>{matched ? `${latest.match} matched` : `${latest.amount} given`}</b>
+              <small><TimeAgo unix={latest.time} renderedAt={pool.fetchedAt} /> · confirmed</small>
             </div>
           </div>
         )}
         <div className="float f1">
-          <span className="t">{featured.title}</span>
+          <span className="t">Match pool</span>
           <div className="chips">
             <span className={`chip ${featured.kind}`}>{KIND_LABEL[featured.kind]}</span>
             {(featured.demo || featured.testnet) && <span className="chip demo">Test money</span>}

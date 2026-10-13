@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Icon, type IconName } from "../Icons";
+import { PrivateFunder } from "./PrivateFunder";
 
 /** Icon beside the title and line, so the card does not stack three rows of head. */
 function Head({ icon, title, line }: { icon: IconName; title: string; line: string }) {
@@ -22,11 +22,8 @@ export function Kinds({ matched }: { matched: string | null }) {
         <div className="mini">
           <div className="r"><span>Match in place</span><span className="ok">$500</span></div>
           <div className="r"><span>In place until</span><span>31 December</span></div>
-          {matched && <div className="r"><span>Matched so far (demo, test money)</span><span>{matched}</span></div>}
+          {matched && <div className="r"><span>Matched so far (test money)</span><span>{matched}</span></div>}
         </div>
-        <p className="kfoot">
-          Funders can stay private too. <Link href="/pledges/zcash-private-pledge">See a pledge on Zcash</Link> where anyone can check the money and no one sees who gave it.
-        </p>
       </div>
       <div className="kind k2">
         <Head icon="trophy" title="Prize payouts" line="Winners see the date their prize lands." />
@@ -34,6 +31,7 @@ export function Kinds({ matched }: { matched: string | null }) {
       <div className="kind k3">
         <Head icon="undo" title="Give-backs" line="Return fees or winnings to the people who paid them." />
       </div>
+      <PrivateFunder />
     </div>
   );
 }

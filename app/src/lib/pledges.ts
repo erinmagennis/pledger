@@ -550,7 +550,7 @@ export function computeTotals(pool: PoolTotals | null, line: TotalsEntry[], paym
       .filter((e) => e.kind === "donated" && e.tx && e.who)
       .map((e) => ({
         av: e.who!.slice(2, 4).toUpperCase(),
-        text: `A visitor gave ${e.amount ?? formatCents(unitsCents(e.amountUnits))}`,
+        text: `${shortWho(e.who!)} gave ${e.amount ?? formatCents(unitsCents(e.amountUnits))}`,
         time: e.time,
         testnet: true,
         href: TX_URL + e.tx,

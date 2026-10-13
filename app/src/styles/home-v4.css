@@ -1,0 +1,33 @@
+/* Home v4 (2026-10-13): one test-money chip per card, private-funder card, step details, try button. */
+
+/* tracker: the one "Test money" chip sits at the top of the card */
+.thead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.thead .chip.demo{margin-left:0}
+.real-line{font-size:13.5px;color:var(--faint);margin-top:6px}
+
+/* public money, private funder: full row beside the tracker */
+.k4{grid-column:span 2;background:var(--card);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+.k4 .ico{background:var(--ground)}
+.k4 .khead p{max-width:56ch}
+.k4-link{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;margin-left:56px;color:var(--accent);font-weight:600;font-size:15px;text-decoration:underline;text-underline-offset:3px;min-height:44px}
+
+/* how it works: a small toggle per step for the technical detail */
+.step{display:flex;flex-direction:column;align-items:flex-start}
+.step-more{margin-top:14px;display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#eef3ec;font:inherit;font-size:14px;font-weight:600;padding:8px 14px;min-height:44px;cursor:pointer}
+.step-more:hover{background:rgba(255,255,255,.08)}
+.step-more:focus-visible{outline:2px solid var(--peach);outline-offset:3px}
+.step-more .chev{width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform .15s ease}
+.step-more[aria-expanded="true"] .chev{transform:translateY(1px) rotate(-135deg)}
+.step p.step-detail{margin-top:12px;font-size:15px;line-height:1.5;color:#d3ddd0}
+
+/* live pledges: two cards now (the private-funder pledge moved beside the tracker); card one carries the try button */
+#live+.pledges{grid-template-columns:repeat(2,1fr)}
+.pl-try{display:flex;flex-direction:column;gap:12px}
+.pl-try .pl{flex:1}
+.pl-try>.btn{align-self:flex-start}
+
+@media(max-width:900px){
+  .k4{grid-column:auto}
+  #live+.pledges{grid-template-columns:1fr}
+  .k4-link{margin-left:0}
+}

@@ -5,6 +5,7 @@ import { LivePledges } from "@/components/home/LivePledges";
 import { Tracker } from "@/components/home/Tracker";
 import { getLineData, getLivePool } from "@/lib/live";
 import { computeTotals, getPledges, lineStats, withLiveLine, withLivePool } from "@/lib/pledges";
+import "@/styles/home-v4.css";
 
 // Live data: Tempo testnet pool and the Supabase line. Refreshed about every 30 seconds.
 export const revalidate = 30;

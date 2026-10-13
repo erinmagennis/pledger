@@ -9,18 +9,17 @@ const AV_BG = ["var(--peach-soft)", "var(--sage-soft)", "var(--butter-soft)"];
 /** renderedAt = unix seconds of the server render, for relative times. */
 export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: number }) {
   const more = totals.peopleCount - totals.people.length;
-  // Lead with the demo total while real payouts are still $0; the real number stays one line below.
+  // Lead with the test-money total while real payouts are still $0. One "Test money" chip at the top
+  // covers the whole card; the real number stays one short line below.
   const demoLead = totals.testnetCents > 0;
   return (
     <div className="card tracker">
-      <span className="k"><span className="live" />Paid out through Pledger</span>
+      <div className="thead">
+        <span className="k"><span className="live" />Paid out through Pledger</span>
+        {demoLead && <span className="chip demo">Test money</span>}
+      </div>
       <div className="big">{formatCents(demoLead ? totals.testnetCents : totals.paidCents)}</div>
-      {demoLead && (
-        <p className="testnet-line">
-          <span className="chip demo">Test money</span>
-          {formatCents(totals.paidCents)} real so far
-        </p>
-      )}
+      {demoLead && <p className="real-line">Real payouts so far: {formatCents(totals.paidCents)}</p>}
       {totals.peopleCount > 0 && (
         <div className="ppl">
           <span className="stack">
@@ -35,7 +34,7 @@ export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: nu
       {!totals.flat && (
         <figure className="tchart">
           <Sparkline series={totals.series} />
-          <figcaption>{totals.seriesDemo ? "Paid out over time (test money)" : "Paid out over time"}</figcaption>
+          <figcaption>Paid out over time</figcaption>
         </figure>
       )}
       {totals.feed.length > 0 && (
@@ -50,10 +49,7 @@ export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: nu
                 )}
                 <span className="tx">
                   <b>{f.text}</b>
-                  <small>
-                    {f.testnet && <span className="chip demo">Test money</span>}
-                    <TimeAgo unix={f.time} renderedAt={renderedAt} />
-                  </small>
+                  <small><TimeAgo unix={f.time} renderedAt={renderedAt} /></small>
                 </span>
               </a>
             </li>
@@ -69,7 +65,7 @@ export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: nu
           </div>
           <div className="legend">
             {totals.byKind.map((k) => (
-              <span key={k.kind}><i className={`tone-${k.kind}`} />{k.label} {formatCents(k.cents)}</span>
+              <span key={k.kind}><i className={`tone-${k.kind}`} />{k.kind === "matching" ? "Match pool" : k.label} {formatCents(k.cents)}</span>
             ))}
           </div>
         </div>

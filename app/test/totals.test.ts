@@ -82,7 +82,7 @@ describe("home tracker totals", () => {
     };
     const pays: PaymentRecord[] = [{ tx_hash: "0xp1", to_address: "0xabcdef0000000000000000000000000000001234", amount_units: "2500000", block_time: new Date(200_000).toISOString() }];
     const t = computeTotals(pool, [], pays);
-    expect(t.feed.map((f) => f.text)).toEqual(["A visitor gave $5", "Give-back of $2.50 paid", "A visitor gave $10"]);
+    expect(t.feed.map((f) => f.text)).toEqual(["0xcb8b…8D7F gave $5", "Give-back of $2.50 paid", "0x1111…2222 gave $10"]);
     expect(t.feed[0]).toMatchObject({ av: "CB", testnet: true, href: "https://explore.testnet.tempo.xyz/tx/0xd3" });
     expect(t.feed[1]).toMatchObject({ av: null, testnet: false, href: "https://basescan.org/tx/0xp1" });
     expect(computeTotals(null, [], []).feed).toEqual([]);
