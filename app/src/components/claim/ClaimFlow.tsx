@@ -152,7 +152,7 @@ export function ClaimFlow() {
       <div className="card cl-step">
         <span className="k"><b>1</b>Connect</span>
         <h2>Connect your wallet</h2>
-        <p className="cl-soft">This wallet is your account and where your payment goes. USDC on Base.</p>
+        <p className="cl-soft">Your payment goes here, in USDC on Base.</p>
         {isConnected && address ? (
           <div className="cl-row">
             <span className="cl-pill"><span className="live" />{shortAddress(address)}</span>
@@ -174,7 +174,7 @@ export function ClaimFlow() {
             ))}
           </div>
         )}
-        {!isConnected && <p className="cl-soft">No wallet? Coinbase Wallet makes one in a minute.</p>}
+        {!isConnected && <p className="cl-soft">No wallet? Coinbase Wallet can create one.</p>}
         {connect.error && <p className="cl-error">{connectError(connect.error)}</p>}
       </div>
 
@@ -182,20 +182,8 @@ export function ClaimFlow() {
         <span className="k"><b>2</b>Emails</span>
         <h2>Add your Artizen emails</h2>
         <ul className="cl4-emails">
-          <li>
-            <span className="chip cl-ok">Needed</span>
-            <div>
-              <b>Your receipt: &ldquo;You collected&hellip;&rdquo;</b>
-              <span>Proves you paid, and shows the project, date and 10% fee you can claim.</span>
-            </div>
-          </li>
-          <li>
-            <span className="chip cl-self">If you backed your own project</span>
-            <div>
-              <b>The sale email: &ldquo;You sold&hellip;&rdquo;</b>
-              <span>Shows the purchase was on your own project, so that claim goes to the front of the line.</span>
-            </div>
-          </li>
+          <li><b>Needed:</b> your receipt, &ldquo;You collected&hellip;&rdquo;</li>
+          <li><b>Backed your own project?</b> Add the sale email, &ldquo;You sold&hellip;&rdquo;, to go first in line.</li>
         </ul>
         <label
           className={`cl-drop${dragOn ? " on" : ""}`}
@@ -219,7 +207,7 @@ export function ClaimFlow() {
 
       {rows && (
         <div className="card cl-step">
-          <span className="k"><b>3</b>Review</span>
+          <span className="k"><b>2a</b>Review</span>
           <div className="cl-row" style={{ justifyContent: "space-between" }}>
             <h2>What we found</h2>
             <button className="cl-link" onClick={clearFiles}>Start over</button>
@@ -251,7 +239,7 @@ export function ClaimFlow() {
 
       {rows && summary && summary.claimable > 0 && (
         <div className="card cl-step">
-          <span className="k"><b>4</b>Name</span>
+          <span className="k"><b>2b</b>Name</span>
           <fieldset className="cl-choice">
             <legend>How should you show in the public line?</legend>
             {([["initials", "Initials"], ["full", "Full name"], ["project", "Project only"]] as const).map(([v, l]) => (
@@ -273,7 +261,7 @@ export function ClaimFlow() {
 
       {rows && summary && summary.claimable > 0 && (
         <div className="card cl-step">
-          <span className="k"><b>5</b>Sign</span>
+          <span className="k"><b>2c</b>Sign</span>
           <h2>Sign and send</h2>
           <p className="cl-soft">Your wallet signs a message with your receipts and payout address. No fee, no transaction.</p>
           <label className="cl-confirm">
@@ -298,12 +286,12 @@ export function ClaimFlow() {
       )}
       {error && !(rows && summary && summary.claimable > 0) && <p className="cl-error">{error}</p>}
 
-      <AfterStep n={rows && summary && summary.claimable > 0 ? 6 : rows ? 4 : 3} />
+      <AfterStep n={3} />
     </div>
   );
 }
 
-/** The last section: what happens once the claim is signed. Numbered after whatever steps are showing. */
+/** The last section: what happens once the claim is signed. Always step 3; review, name and sign are 2a to 2c. */
 function AfterStep({ n }: { n: number }) {
   return (
     <div className="card cl-step cl4-after">

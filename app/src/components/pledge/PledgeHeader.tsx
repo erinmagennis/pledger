@@ -14,6 +14,7 @@ export function PledgeHeader({
   pledge,
   float,
   sub,
+  extra,
   doors,
   hideBy,
   hideAction,
@@ -22,6 +23,8 @@ export function PledgeHeader({
   pledge: Pledge;
   float?: HeaderFloat;
   sub?: ReactNode;
+  /** Block content shown under the description, above the doors (lists are not allowed inside the <p>). */
+  extra?: ReactNode;
   doors?: HeaderDoor[];
   /** Hide the "Pledged by" chip when the page shows the funder further down. */
   hideBy?: boolean;
@@ -44,6 +47,7 @@ export function PledgeHeader({
       </div>
       <h1>{pledge.title}</h1>
       {sub && <p className="psub">{sub}</p>}
+      {extra}
       {doors ? (
         <div className="doors">
           {doors.map((d) => (
