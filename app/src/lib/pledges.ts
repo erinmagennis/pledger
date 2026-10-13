@@ -14,7 +14,7 @@ const DEMO_PROJECT = "0x420ff9871fa9Dc61232356F2c37c7C5E42EC0967";
 const BASESCAN_TX = "https://basescan.org/tx/";
 const addrRow = (label: string, value: string, addr: string): InPlaceRow => ({ label, value, href: `${TEMPO_EXPLORER}/address/${addr}` });
 const POOL_ROWS: InPlaceRow[] = [
-  addrRow("Goes to", `Demo project ${shortWho(DEMO_PROJECT)}`, DEMO_PROJECT),
+  addrRow("Goes to", `Riverside Seed Library ${shortWho(DEMO_PROJECT)}`, DEMO_PROJECT),
   addrRow("Pool contract", shortWho(POOL_ADDRESS), POOL_ADDRESS),
 ];
 
@@ -312,9 +312,9 @@ const pledges: Pledge[] = [
     // withLivePool() below (see src/lib/tempo.ts readPool()).
     slug: "test-match-pool",
     kind: "matching",
-    title: "Demo match pool",
+    title: "Double every gift to the Riverside Seed Library",
     demo: true,
-    by: { name: "Pledger demo", initials: "PL" },
+    by: { name: "Riverside Neighbors Fund", initials: "RN" },
     chain: "Tempo testnet",
     stats: [
       { value: "$500", label: "put in place" },
@@ -332,7 +332,7 @@ const pledges: Pledge[] = [
     howItWorks: [
       "The $500 match is locked until 31 December 2026. It cannot be taken back before then.",
       "Each donation is matched 1:1, up to $20 per visitor.",
-      "Donation and match go to Demo project together, in the same transaction.",
+      "Donation and match go to Riverside Seed Library together, in the same transaction.",
     ],
     action: { label: "Try it with test money", href: "#try" },
   },

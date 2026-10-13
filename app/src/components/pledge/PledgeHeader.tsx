@@ -17,6 +17,7 @@ export function PledgeHeader({
   doors,
   hideBy,
   hideAction,
+  hideTestChip,
 }: {
   pledge: Pledge;
   float?: HeaderFloat;
@@ -26,12 +27,14 @@ export function PledgeHeader({
   hideBy?: boolean;
   /** Hide the default button when the page body has its own (the demo's Try card). */
   hideAction?: boolean;
+  /** Hide the "Test money" chip when the page already says so once, in its own banner. */
+  hideTestChip?: boolean;
 }) {
   return (
     <header className={`phead ${pledge.kind}`}>
       <div className="meta-row">
         <span className={`chip ${pledge.kind}`}>{KIND_LABEL[pledge.kind]}</span>
-        {(pledge.demo || pledge.testnet) && <span className="chip demo">Test money</span>}
+        {(pledge.demo || pledge.testnet) && !hideTestChip && <span className="chip demo">Test money</span>}
         {!hideBy && (
           <span className="who">
             <WhoAvatar pledge={pledge} />

@@ -31,21 +31,21 @@ function clientFor(key: Hex, sponsored: boolean) {
     .extend(tempoActions());
 }
 
-async function run(key: Hex, dollars: number, sponsored: boolean, onStep: (s: GiveStep) => void): Promise<GiveResult> {
+async function run(key: Hex, dollars: number, sponsored: boolean, onStep: (s: GiveStep) => void, pool: Hex): Promise<GiveResult> {
   const c = clientFor(key, sponsored);
   const who = c.account.address;
   const amount = parseUnits(String(dollars), 6);
   const fee = sponsored ? { feePayer: true as const } : { feeToken: ALPHA_USD };
 
   let approveTx: Hex | undefined;
-  const allowance = await c.readContract({ address: ALPHA_USD, abi: erc20Abi, functionName: "allowance", args: [who, MATCH_POOL] });
+  const allowance = await c.readContract({ address: ALPHA_USD, abi: erc20Abi, functionName: "allowance", args: [who, pool] });
   if (allowance < amount) {
     onStep("approving");
     approveTx = await c.writeContract({
       address: ALPHA_USD,
       abi: erc20Abi,
       functionName: "approve",
-      args: [MATCH_POOL, amount],
+      args: [pool, amount],
       // A wallet's first self-paid tx costs about 530k gas (account setup), so allow more without the relay.
       gas: sponsored ? 500_000n : 1_000_000n,
       validBefore: validBefore(),
@@ -58,7 +58,7 @@ async function run(key: Hex, dollars: number, sponsored: boolean, onStep: (s: Gi
   onStep("donating");
   const memo = toHex("pledger-demo-" + who.slice(2, 8).toLowerCase() + Math.random().toString(36).slice(2, 6), { size: 32 });
   const donateTx = await c.writeContract({
-    address: MATCH_POOL,
+    address: pool,
     abi: matchPoolAbi,
     functionName: "donate",
     args: [amount, memo],
@@ -82,12 +82,12 @@ async function run(key: Hex, dollars: number, sponsored: boolean, onStep: (s: Gi
   };
 }
 
-export async function give(key: Hex, dollars: number, onStep: (s: GiveStep) => void): Promise<GiveResult> {
+export async function give(key: Hex, dollars: number, onStep: (s: GiveStep) => void, pool: Hex = MATCH_POOL): Promise<GiveResult> {
   try {
-    return await run(key, dollars, true, onStep);
+    return await run(key, dollars, true, onStep, pool);
   } catch (first) {
     console.warn("Sponsored send failed, retrying with fee in AlphaUSD", first);
-    return run(key, dollars, false, onStep);
+    return run(key, dollars, false, onStep, pool);
   }
 }
 

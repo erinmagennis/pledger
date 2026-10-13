@@ -12,7 +12,7 @@ export const MATCH_POOL: Address = "0x02b1364d6d6a4a2a73665591d2083d25e7396a5f";
 export const ALPHA_USD: Address = "0x20c0000000000000000000000000000000000001";
 export const ALPHA_DECIMALS = 6;
 export const RECIPIENT: Address = "0x420ff9871fa9Dc61232356F2c37c7C5E42EC0967";
-export const RECIPIENT_LABEL = "Demo project";
+export const RECIPIENT_LABEL = "Riverside Seed Library";
 export const SPONSOR: Address = "0x5A762ad2E7Bf8e372a7a26b5F6Bb295dCe69fd41";
 export const DEPLOY_TX: Hex = "0xe9836e53bb5b58a59c756edd34676dd2586302f4b8ca02b0ec67615d63636d2f";
 export const DEPLOY_BLOCK = 39277028n;
@@ -76,19 +76,19 @@ export type PoolData = {
 
 const LOG_CHUNK = 90_000n;
 
-/** Reads summary() plus all Deposited and Donated logs, newest first. */
-export async function readPool(): Promise<PoolData> {
+/** Reads summary() plus all Deposited and Donated logs, newest first. Defaults to the example pool. */
+export async function readPool(address: Address = MATCH_POOL, fromBlock: bigint = DEPLOY_BLOCK): Promise<PoolData> {
   const c = publicClient();
   const [summary, latest] = await Promise.all([
-    c.readContract({ address: MATCH_POOL, abi: matchPoolAbi, functionName: "summary" }),
+    c.readContract({ address, abi: matchPoolAbi, functionName: "summary" }),
     c.getBlockNumber(),
   ]);
   const [pool, totalDonated, totalMatched, donationCount, lockUntil] = summary;
 
   const logs = [];
-  for (let from = DEPLOY_BLOCK; from <= latest; from += LOG_CHUNK) {
+  for (let from = fromBlock; from <= latest; from += LOG_CHUNK) {
     const to = from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest;
-    const chunk = await c.getContractEvents({ address: MATCH_POOL, abi: matchPoolAbi, fromBlock: from, toBlock: to });
+    const chunk = await c.getContractEvents({ address, abi: matchPoolAbi, fromBlock: from, toBlock: to });
     logs.push(...chunk);
   }
 
@@ -137,7 +137,7 @@ export async function readPool(): Promise<PoolData> {
     matchedUnits: totalMatched.toString(),
     donatedUnits: totalDonated.toString(),
     events,
-    contract: MATCH_POOL,
+    contract: address,
     fetchedAt: Math.floor(Date.now() / 1000),
   };
 }
