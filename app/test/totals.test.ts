@@ -130,7 +130,7 @@ describe("artizen line stats", () => {
   it("counts people, fees and paid", () => {
     const st = lineStats([entry("a", "x", 100, 40, "1"), entry("a", "x", 50, 0, "1"), entry("b", "y", 70, 70, "2")]);
     expect(st).toEqual({ people: 2, feesCents: 220, paidCents: 110 });
-    const p = withLiveLine(getPledge("artizen-give-back")!, st);
+    const p = withLiveLine(getPledge("artizen")!, st);
     expect(p.stats.map((s) => s.value)).toEqual(["2", "$2.20", "$1.10"]);
     expect(p.cardStats!.map((s) => s.value)).toEqual(["2", "$2.20", "$1.10"]);
   });

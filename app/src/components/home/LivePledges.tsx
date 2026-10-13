@@ -2,7 +2,7 @@ import { Button } from "../Button";
 import { PledgeCard } from "../PledgeCard";
 import { ZCASH_SLUG, type Pledge } from "@/lib/pledges";
 
-const TRY_SLUG = "test-match-pool";
+const TRY_SLUG = "demo";
 
 export function LivePledges({ pledges }: { pledges: Pledge[] }) {
   // The private-funder pledge is linked from the line at the bottom of the green band, so it is not listed here.

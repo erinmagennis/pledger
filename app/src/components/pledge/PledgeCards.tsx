@@ -86,7 +86,7 @@ export function HowBand() {
           </li>
         ))}
       </ol>
-      <a className="gb4-band-link" href="/pledges/test-match-pool">
+      <a className="gb4-band-link" href="/pledges/demo">
         See a pledge funded up front (test money)<Icon name="arrow" small />
       </a>
     </section>
@@ -129,7 +129,7 @@ export function BackersSection({ stats }: { stats: LineStats }) {
           <h3>Back it too</h3>
           <p>Pay by card (Stripe, test mode for now) or with USDC on Base. The money goes straight to people in line.</p>
           <div className="gb-invite-cta">
-            <Button href="/claim/line#help" variant="ghost">Help pay people back</Button>
+            <Button href="/pledges/artizen/line#help" variant="ghost">Help pay people back</Button>
           </div>
         </article>
       </div>

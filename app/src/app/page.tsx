@@ -14,11 +14,11 @@ export default async function Home() {
   const [pool, lineData] = await Promise.all([getLivePool(), getLineData()]);
   const stats = lineStats(lineData.line);
   const pledges = getPledges().map((p) => {
-    if (p.slug === "test-match-pool" && pool) return withLivePool(p, pool);
-    if (p.slug === "artizen-give-back") return withLiveLine(p, stats);
+    if (p.slug === "demo" && pool) return withLivePool(p, pool);
+    if (p.slug === "artizen") return withLiveLine(p, stats);
     return p;
   });
-  const featured = pledges.find((p) => p.slug === "test-match-pool") ?? pledges[0]!;
+  const featured = pledges.find((p) => p.slug === "demo") ?? pledges[0]!;
   return (
     <>
       <Hero featured={featured} pool={pool} />

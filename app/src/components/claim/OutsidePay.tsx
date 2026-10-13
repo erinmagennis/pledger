@@ -83,7 +83,7 @@ export function OutsidePay({ pid, hasPay }: { pid: string; hasPay: boolean }) {
         {hasPay ? (
           "After you send, press Pay and paste the transaction link so the line updates."
         ) : (
-          <>After you send, paste the transaction link on the <Link href="/claim/line">full line</Link> so it updates.</>
+          <>After you send, paste the transaction link on the <Link href="/pledges/artizen/line">full line</Link> so it updates.</>
         )}
       </span>
       {err && <span className="cl-error">{err}</span>}

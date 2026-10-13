@@ -146,7 +146,7 @@ export function TryIt({
       )}
       {phase === "idle" && !TEMPO_CARD_ENABLED && (
         <p className="try-note">
-          Card payments are coming to Tempo pools. Today you can pay people back by card on the <a href="/pledges/artizen-give-back">Artizen give-back</a> (test mode).
+          Card payments are coming to Tempo pools. Today you can pay people back by card on the <a href="/pledges/artizen">Artizen give-back</a> (test mode).
         </p>
       )}
 

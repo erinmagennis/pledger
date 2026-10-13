@@ -139,7 +139,7 @@ export function ClaimFlow() {
           {address ? shortAddress(address) : "your wallet"} in USDC on Base.
         </p>
         <div className="ctas" style={{ marginTop: 22 }}>
-          <Link className="btn btn-primary" href="/claim/line">
+          <Link className="btn btn-primary" href="/pledges/artizen/line">
             See the line<span className="arr"><Icon name="arrow" /></span>
           </Link>
         </div>
@@ -323,7 +323,7 @@ function AfterStep({ n }: { n: number }) {
           </div>
         </li>
       </ul>
-      <Link className="cl4-line-link" href="/claim/line">See the line<Icon name="arrow" small /></Link>
+      <Link className="cl4-line-link" href="/pledges/artizen/line">See the line<Icon name="arrow" small /></Link>
     </div>
   );
 }

@@ -151,7 +151,7 @@ export function facts(cfg: PoolConfig, n: PoolNumbers): { label: string; value: 
   ];
 }
 
-/** The example pledge on /pledges/test-match-pool: the first pool, deployed before /make existed.
+/** The example pledge on /pledges/demo: the first pool, deployed before /make existed.
  * Written as if real; the page says once, at the top, that it is an example with test money. */
 export const EXAMPLE = {
   title: "Double every gift to the Riverside Seed Library",
@@ -160,7 +160,7 @@ export const EXAMPLE = {
 };
 
 export const EXAMPLE_POOL: PoolConfig = {
-  slug: "test-match-pool",
+  slug: "demo",
   address: "0x02b1364d6d6a4a2a73665591d2083d25e7396a5f",
   name: EXAMPLE.title,
   poolUsd: 500,

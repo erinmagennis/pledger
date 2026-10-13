@@ -29,7 +29,7 @@ export default function MakePage() {
         </div>
         <div className="ctas">
           <Button href="https://t.me/erinmagennis">Talk to us on Telegram</Button>
-          <Button href="/pledges/test-match-pool" variant="ghost">See an example</Button>
+          <Button href="/pledges/demo" variant="ghost">See an example</Button>
         </div>
       </section>
     </main>

@@ -14,7 +14,7 @@ export function SiteNav() {
       </div>
       <div className="navr">
         <NetSwitch />
-        <Button href="/pledges/test-match-pool#try" size="sm">Try the demo</Button>
+        <Button href="/pledges/demo#try" size="sm">Try the demo</Button>
       </div>
     </nav>
   );

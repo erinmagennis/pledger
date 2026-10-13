@@ -25,9 +25,9 @@ const GIVE_BACK_FACTS: [string, string][] = [
 export const revalidate = 30;
 
 export function generateStaticParams(): Params[] {
-  // test-match-pool has its own route (src/app/pledges/test-match-pool).
+  // test-match-pool has its own route (src/app/pledges/demo).
   return getPledges()
-    .filter((p) => p.slug !== "test-match-pool")
+    .filter((p) => p.slug !== "demo")
     .map((p) => ({ slug: p.slug }));
 }
 
@@ -41,7 +41,7 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
   const { slug } = await params;
   const base = getPledge(slug);
   if (!base) notFound();
-  if (base.slug === "artizen-give-back") {
+  if (base.slug === "artizen") {
     const st = lineStats((await getLineData()).line);
     const pledge = withLiveLine(base, st);
     return (
@@ -67,7 +67,7 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
                 ))}
               </ul>
             }
-            doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/claim" }]}
+            doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/pledges/artizen/claim" }]}
           />
         </div>
         <HowBand />

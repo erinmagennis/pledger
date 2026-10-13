@@ -25,7 +25,7 @@ export function LineCard({ initial }: { initial?: LineStats }) {
       </div>
       <LineList entries={line.slice(0, 20)} loaded={loaded} />
       <div className="cl-more">
-        <Link className="go" href="/claim/line">
+        <Link className="go" href="/pledges/artizen/line">
           {line.length > 20 ? `See all ${line.length}` : "See all"} <Icon name="arrow" />
         </Link>
       </div>

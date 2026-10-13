@@ -173,7 +173,7 @@ function zcashData(raw: object): ZcashPledgeData {
   return { ...r, networkId: r.networkId ?? (r.network === "Zcash mainnet" ? "mainnet" : "testnet"), published: r.published ?? true };
 }
 
-export const ZCASH_SLUG = "zcash-private-pledge";
+export const ZCASH_SLUG = "zcash";
 /** The testnet proof (home card and default page). */
 export const ZCASH: ZcashPledgeData = zcashData(zcashTestnetJson);
 export const ZCASH_MAINNET: ZcashPledgeData = zcashData(zcashMainnetJson);
@@ -310,7 +310,7 @@ const pledges: Pledge[] = [
   {
     // Static facts only. Live numbers and activity come from Tempo via
     // withLivePool() below (see src/lib/tempo.ts readPool()).
-    slug: "test-match-pool",
+    slug: "demo",
     kind: "matching",
     title: "Double every gift to the Riverside Seed Library",
     demo: true,
@@ -337,7 +337,7 @@ const pledges: Pledge[] = [
     action: { label: "Try it with test money", href: "#try" },
   },
   {
-    slug: "artizen-give-back",
+    slug: "artizen",
     kind: "give-back",
     title: "Get your Artizen 10% back",
     by: { name: "Erin Magennis", initials: "EM" },
@@ -353,7 +353,7 @@ const pledges: Pledge[] = [
       "Each receipt can be claimed once.",
       "Payments go out on Base, and each one is recorded in public.",
     ],
-    action: { label: "Check or add your claim", href: "/claim" },
+    action: { label: "Check or add your claim", href: "/pledges/artizen/claim" },
   },
   // Third by priority: after the demo pool and the Artizen give-back.
   zcashPledge(),

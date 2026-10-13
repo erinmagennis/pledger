@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icons";
 import { LineWithPay } from "@/components/claim/LinePage";
 
 export const metadata: Metadata = { title: "The line · Artizen give-back · Pledger" };
 
-export default function LinePage() {
+export default async function LinePage({ params }: { params: Promise<{ slug: string }> }) {
+  // Only the Artizen give-back takes claims for now.
+  if ((await params).slug !== "artizen") notFound();
   return (
     <>
-      <Link className="back" href="/pledges/artizen-give-back"><Icon name="arrow" small />The pledge</Link>
+      <Link className="back" href="/pledges/artizen"><Icon name="arrow" small />The pledge</Link>
       <header className="phead give-back cl-head">
         <span className="eyebrow"><span className="live" />Artizen give-back</span>
         <h1>The <em>line</em></h1>
         {/* TODO(copy) */}
         <p className="sub">Everyone waiting for their 10% back. Anyone can pay someone in line directly.</p>
-        <div className="ctas"><Button href="/claim">Add your claim</Button></div>
+        <div className="ctas"><Button href="/pledges/artizen/claim">Add your claim</Button></div>
       </header>
       <section className="pgrid">
         <LineWithPay />

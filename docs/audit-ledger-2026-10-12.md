@@ -155,7 +155,7 @@ The 5-per-person cap is checked on a read (`payments-server.ts:87`) taken from `
 
 ## State table: what each page shows in each partial state
 
-| # | State (DB vs chain) | Line page (`/claim/line`) | Help pay | Home and pledge totals | On-chain record |
+| # | State (DB vs chain) | Line page (`/pledges/artizen/line`) | Help pay | Home and pledge totals | On-chain record |
 |---|----------------------|---------------------------|----------|------------------------|-----------------|
 | 1 | Claim stored, "in line" attestation pending or missing | "Waiting" | Includes them | Counted in fees claimed | None or pending row |
 | 2 | Transfer on Base, no payment row (SI-01, SI-03, SI-04) | "Waiting", full amount owed; Pay button live | Sends the next helper once the hold ends | Not counted | None |
