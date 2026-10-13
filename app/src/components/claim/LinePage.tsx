@@ -29,7 +29,7 @@ export function LineWithPay({ initial, funder }: { initial?: LineStats; funder?:
             <h3>Back it too</h3>
             <ol className="gb4-steps">
               <li>Pick an amount, or how many people to pay.</li>
-              <li>Pay with USDC on Base from your wallet.</li>
+              <li>Pay with USDC on Base from your wallet.<span className="gb4-step-note">Or try paying by card with a Stripe test card, using Pay on any row in the line (test mode for now).</span></li>
               <li>It goes straight to the next people in line, in order.</li>
             </ol>
             <HelpPay lineVersion={version} onPaid={refresh} />

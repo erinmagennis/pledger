@@ -89,3 +89,4 @@
 .gb4-steps{margin:0 0 14px;padding-left:20px;display:grid;gap:4px;font-size:15px}
 .gb4-backit .cl-help-card{box-shadow:none;border:0;padding:0;margin:0;background:none}
 .gb4-backit .cl-help-card > h2,.gb4-backit .cl-help-card > h2 + p{display:none}
+.gb4-step-note{display:block;font-size:13px;color:var(--faint);margin-top:2px}
