@@ -441,9 +441,12 @@ export type Totals = {
   /** Testnet sends in the demo: donated plus matched. */
   testnetCents: number;
   byKind: { kind: PledgeKind; label: string; cents: number }[];
-  /** Cumulative cents by day, oldest first. Flat when there are fewer than 2 days. */
+  /** Cumulative cents after each event, oldest first, starting at 0. Same source as the headline:
+   * testnet gifts while the demo leads (seriesDemo), real give-backs otherwise. Flat when there are no events. */
   series: number[];
   flat: boolean;
+  /** True when the series is test money (the headline leads with the testnet total). */
+  seriesDemo: boolean;
   /** Initials for the most recent people in line (max 3). */
   people: string[];
   peopleCount: number;
@@ -490,11 +493,10 @@ export function computeTotals(pool: PoolTotals | null, line: TotalsEntry[], paym
   const counted = payments.filter((p) => !isExtra(p));
   const testnetCents = pool ? unitsCents(pool.donatedUnits) + unitsCents(pool.matchedUnits) : 0;
 
-  const byDay = new Map<string, number>();
-  const add = (iso: string, cents: number) => {
-    const day = iso.slice(0, 10);
-    byDay.set(day, (byDay.get(day) ?? 0) + cents);
-  };
+  // One point per event, so a single day of gifts still draws a climb. The chart follows the headline:
+  // testnet gifts when the demo leads, real give-backs otherwise; the two are never mixed.
+  const realSteps: { t: number; cents: number }[] = [];
+  const demoSteps: { t: number; cents: number }[] = [];
   // Give-backs on the chart use the same capped numbers as the headline: each person's payments,
   // in time order, fill their entries (fee cap, forgiveness within the allowance), and a day only gains what that adds.
   // Keyed by full address when the server line carries it, so two people sharing a short address stay apart.
@@ -514,16 +516,17 @@ export function computeTotals(pool: PoolTotals | null, line: TotalsEntry[], paym
     const units = (runUnits.get(who) ?? 0n) + paymentUnits(p.amount_units);
     runUnits.set(who, units);
     const cents = credited(feesBy.get(who) ?? [], units);
-    add(new Date(p.block_time).toISOString(), cents - (runCents.get(who) ?? 0));
+    realSteps.push({ t: Date.parse(p.block_time), cents: cents - (runCents.get(who) ?? 0) });
     runCents.set(who, cents);
   }
   for (const e of pool?.events ?? []) {
-    if (e.kind === "donated") add(new Date(e.time * 1000).toISOString(), unitsCents(e.amountUnits) + unitsCents(e.matchUnits));
+    if (e.kind === "donated") demoSteps.push({ t: e.time * 1000, cents: unitsCents(e.amountUnits) + unitsCents(e.matchUnits) });
   }
-  const days = [...byDay.keys()].sort();
+  const seriesDemo = testnetCents > 0;
+  const steps = (seriesDemo ? demoSteps : realSteps).sort((a, b) => a.t - b.t);
   let run = 0;
-  const cumulative = days.map((d) => (run += byDay.get(d)!));
-  const flat = cumulative.length < 2;
+  const cumulative = [0, ...steps.map((st) => (run += st.cents))];
+  const flat = steps.length === 0;
 
   const recent = new Map<string, { at: string; label: string }>();
   for (const e of line) {
@@ -563,6 +566,6 @@ export function computeTotals(pool: PoolTotals | null, line: TotalsEntry[], paym
     .sort((a, b) => b.time - a.time)
     .slice(0, 3);
 
-  return { paidCents, testnetCents, byKind, series: flat ? [0, 0] : cumulative, flat, people, peopleCount: recent.size, feed };
+  return { paidCents, testnetCents, byKind, series: flat ? [0, 0] : cumulative, flat, seriesDemo, people, peopleCount: recent.size, feed };
 }
 

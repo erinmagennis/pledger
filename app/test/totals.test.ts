@@ -36,16 +36,38 @@ describe("home tracker totals", () => {
     expect(t.paidCents).toBe(250);
     expect(t.testnetCents).toBe(2000);
     expect(t.byKind.map((k) => k.kind)).toEqual(["matching", "give-back"]);
-    // Two different days: a real curve, deposits excluded.
+    // The chart follows the headline: test money leads, so only testnet gifts are on it (deposits and real payments excluded).
     expect(t.flat).toBe(false);
-    expect(t.series).toEqual([2000, 2250]);
+    expect(t.seriesDemo).toBe(true);
+    expect(t.series).toEqual([0, 2000]);
   });
 
-  it("hides zero segments and stays flat with one day of data", () => {
+  it("hides zero segments; one gift still draws a climb from zero", () => {
     const pool: PoolTotals = { donatedUnits: "5000000", matchedUnits: "5000000", events: [{ kind: "donated", time: 1760140800, amountUnits: "5000000", matchUnits: "5000000" }] };
     const t = computeTotals(pool, [], []);
     expect(t.byKind).toEqual([{ kind: "matching", label: "Demo match pool (test money)", cents: 1000 }]);
-    expect(t.flat).toBe(true);
+    expect(t.flat).toBe(false);
+    expect(t.series).toEqual([0, 1000]);
+  });
+
+  it("several same-day gifts give one point each, oldest first, ending at the headline", () => {
+    const g = (time: number, units: string) => ({ kind: "donated" as const, time, amountUnits: units, matchUnits: units });
+    const pool: PoolTotals = {
+      donatedUnits: "42500000",
+      matchedUnits: "42500000",
+      events: [g(1760140900, "25000000"), { kind: "deposited", time: 1760140000, amountUnits: "500000000" }, g(1760140800, "10000000"), g(1760141000, "7500000")],
+    };
+    const t = computeTotals(pool, [], []);
+    expect(t.seriesDemo).toBe(true);
+    expect(t.series).toEqual([0, 2000, 7000, 8500]);
+    expect(t.series.at(-1)).toBe(t.testnetCents);
+  });
+
+  it("real give-backs drive the chart when there is no test money", () => {
+    const pays: PaymentRecord[] = [{ tx_hash: "0x1", to_address: "0xa", amount_units: "2500000", block_time: "2026-10-12T10:00:00Z" }];
+    const t = computeTotals(null, [entry("a", "x", 250, 250, "1", "0xa")], pays);
+    expect(t).toMatchObject({ seriesDemo: false, flat: false, series: [0, 250] });
+    expect(computeTotals(null, [], [])).toMatchObject({ seriesDemo: false, flat: true });
   });
 
   it("feed shows the latest 3 events across testnet gifts and give-backs, newest first", () => {
@@ -100,7 +122,7 @@ describe("chart is capped like the headline", () => {
     ];
     const t = computeTotals(null, line, pays);
     expect(t.paidCents).toBe(2000);
-    expect(t.series).toEqual([1000, 2000, 2000]);
+    expect(t.series).toEqual([0, 1000, 2000, 2000]);
   });
 });
 

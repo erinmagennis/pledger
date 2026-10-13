@@ -67,7 +67,8 @@ section{padding-top:28px;position:relative;z-index:1}
 .big{font-size:64px;font-weight:600;letter-spacing:-.04em;line-height:1.05;margin-top:10px}
 .testnet-line{color:var(--soft);font-size:15px;margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.testnet-line .chip.demo{margin-left:0}
 .ppl{display:flex;align-items:center;gap:10px;margin-top:10px}.stack{display:flex}.stack .av{margin-right:-8px;border:2px solid #fff;width:28px;height:28px}.ppl .k{margin-left:12px}
-.spark{width:100%;height:90px;margin-top:22px;display:block}.spark.flat{height:10px;margin-top:auto;padding-top:22px;box-sizing:content-box}
+.spark{width:100%;height:90px;margin-top:22px;display:block;overflow:visible}.spark.flat{height:10px;margin-top:auto;padding-top:22px;box-sizing:content-box}
+.tchart{margin:0}.tchart figcaption{font-size:13px;color:var(--faint);margin-top:8px}
 .seg{display:flex;gap:3px;height:8px;margin-top:18px}.seg i{border-radius:99px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--soft)}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;margin-right:8px;vertical-align:middle;flex:none}

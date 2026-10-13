@@ -50,7 +50,7 @@ Two fingerprint bugs found and fixed while testing:
 
 ## Zcash testnet: private pledge with a viewing key
 
-Spike on 2026-10-12 (16:49 to 17:26 UTC). Testnet only. Data for the page: `app/src/content/zcash-pledge.json`. App tests: `app/test/zcash-pledge.test.ts`.
+Spike on 2026-10-12 (16:49 to 17:26 UTC), on testnet. Data for the testnet page: `app/src/content/zcash-pledge.testnet.json`. The mainnet pledge is now live too: 0.01686667 ZEC in the Ironwood pool, read from the viewing key with `app/scripts/zcash-snapshot.mjs` (`@ledgerhq/zcash-utils`) at block 3,515,742 on 12 Oct 2026, data in `app/src/content/zcash-pledge.mainnet.json`. App tests: `app/test/zcash-pledge.test.ts`.
 
 | Date | Check | Result |
 |---|---|---|

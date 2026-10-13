@@ -16,7 +16,7 @@ import {
 } from "@/lib/claims";
 import { EmailHelp } from "./EmailHelp";
 
-type Done = { claimed: number; totalCents: number; place: number | null; nextUpdate: string };
+type Done = { claimed: number; totalCents: number; place: number | null };
 
 function fmtDate(iso?: string) {
   if (!iso) return "";

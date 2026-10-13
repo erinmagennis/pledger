@@ -6,7 +6,7 @@ When someone promises money (a match, a prize, a give-back), Pledger shows wheth
 
 Live: **https://pledger.impacthook.org**
 
-Built for Colosseum's Crypto World's Fair (Sep 14 to Oct 12, 2026). Started Oct 11, 2026. Chains: Tempo (match pools), Base (claims, payouts and public records) and Zcash (testnet, private pledges).
+Built for Colosseum's Crypto World's Fair (Sep 14 to Oct 12, 2026). Started Oct 11, 2026. Chains: Tempo (match pools), Base (claims, payouts and public records) and Zcash (private pledges, live on mainnet with a testnet version too).
 
 ## What you can try
 
@@ -14,7 +14,7 @@ Built for Colosseum's Crypto World's Fair (Sep 14 to Oct 12, 2026). Started Oct 
 |---|---|---|
 | Demo match pool (test money) | [/pledges/test-match-pool](https://pledger.impacthook.org/pledges/test-match-pool) | Press **Try it with test money**. The page makes a throwaway test wallet, fills it with free test money, and gives $5 to $20. The pool matches 1:1 up to $20 per visitor, in the same transaction, with no fee for the donor. The match is locked until 31 Dec 2026 and cannot be taken back before then. No login, no wallet extension. |
 | Artizen give-back (real) | [/pledges/artizen-give-back](https://pledger.impacthook.org/pledges/artizen-give-back) | People who paid Artizen's 10% endowment fee in Season 7 claim it back from half of the builder's Colosseum winnings. They drop in their original receipt emails, and Pledger checks Artizen's DKIM signature on each one, so there are no screenshots and no manual review. Self-backers go first, smallest claims first. Anyone can pay people in line directly on Base, by amount or by the next people in line. |
-| Zcash testnet pledge (test money) | [/pledges/zcash-private-pledge](https://pledger.impacthook.org/pledges/zcash-private-pledge) | A pledge whose funder stays private while the money stays checkable. Look at **What's in place** (0.1239 TAZ, funder private), then open **Verify it yourself**: copy the viewing key and run the command to see the same balance. Open the pledge transaction in the explorer: it shows the fee only, with no sender, recipient or amount. The key can read but cannot spend. |
+| Zcash private pledge (mainnet, live) | [/pledges/zcash-private-pledge](https://pledger.impacthook.org/pledges/zcash-private-pledge) | A pledge whose funder stays private while the money stays checkable. Switch to **Mainnet** in the header, then look at **What's in place** (0.01686667 ZEC in the Ironwood pool, funder private, read at block 3,515,742 on 12 Oct 2026). Open **Verify it yourself**: copy the viewing key and run the command to see the same balance. Open the pledge transaction in the explorer: it shows the fee only, with no sender, recipient or amount. The key can read but cannot spend. On **Testnet** the same page shows the testnet version (test money). |
 | Pay by card (sandbox) | [/claim/line](https://pledger.impacthook.org/claim/line) | Pay by card: Stripe's onramp sells USDC on Base and sends it straight to the person's wallet, which Pledger locks as the destination (sandbox mode for the hackathon). |
 
 ## How it works
@@ -34,7 +34,7 @@ flowchart LR
 - **Claims from email receipts** (`verify/`, `app/src/lib/verify/`): only a valid signature from artizen.fund that matches the sender counts. The fingerprint of each email can be claimed once. A creator's "You sold" email proves a purchase was self-backed, and it never adds money.
 - **Payments on Base** (`app/src/lib/base.ts`): a payment counts when a native USDC transfer to the claimant appears in a successful transaction. Pay inside Pledger, paste a transaction link, or pay by card through Stripe's onramp with the claimant's wallet locked as the destination. Card payments are live in sandbox mode for the hackathon.
 - **Public records** (`app/src/lib/eas.ts`): each checked claim and each payment is attested on Base with EAS. Records hold a fingerprint, project, fee and status, never personal data.
-- **Private pledges on Zcash** (`app/src/content/zcash-pledge.json`, testnet only): the funder sends money to a shielded Zcash address and the pledge publishes a viewing key. With the key, anyone can check what came in, what went out and what is left, but not who sent it, and the key cannot spend. The balance on the page was checked with zingo-cli from the key alone; reading it server side waits on NU7 support in `@ledgerhq/zcash-utils`.
+- **Private pledges on Zcash** (`app/src/content/zcash-pledge.mainnet.json`, live on mainnet; testnet version in `app/src/content/zcash-pledge.testnet.json`): the funder sends money to a shielded Zcash address and the pledge publishes a viewing key. With the key, anyone can check what came in, what went out and what is left, but not who sent it, and the key cannot spend. The mainnet balance (0.01686667 ZEC, Ironwood pool) was read from the viewing key alone with `app/scripts/zcash-snapshot.mjs` (`@ledgerhq/zcash-utils`), at block 3,515,742 on 12 Oct 2026. The testnet balance was checked with zingo-cli from the key alone.
 - **Privacy**: Pledger stores a fingerprint of each receipt, the project, date and fee, the wallet and the display choice. Never the email or its contents.
 
 ## Where it fits

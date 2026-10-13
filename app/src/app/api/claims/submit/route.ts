@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { checkClaimSignature, displayLabel, isDisplayMode, nameProblem, NEXT_UPDATE, NO_FEE, type ClaimPayload } from "@/lib/claims";
+import { checkClaimSignature, displayLabel, isDisplayMode, nameProblem, NO_FEE, type ClaimPayload } from "@/lib/claims";
 import { checkUploads, loadLine, readUploads } from "@/lib/claims-server";
 import { verifyOnBase } from "@/lib/base";
 import { recordClaims } from "@/lib/eas";
@@ -136,6 +136,5 @@ export async function POST(req: Request) {
     totalCents: insert.reduce((s, r) => s + r.fee_cents, 0),
     place,
     entries,
-    nextUpdate: NEXT_UPDATE,
   });
 }

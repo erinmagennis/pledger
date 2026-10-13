@@ -4,9 +4,6 @@
 export type DisplayMode = "full" | "initials" | "project";
 export type RowKind = "receipt" | "sold" | "other";
 
-/** TODO(copy): Erin sets the real next update date. */
-export const NEXT_UPDATE = "20 October 2026";
-
 /** Max age of a signed claim message, both directions. */
 export const SIGNATURE_MAX_AGE_MS = 10 * 60 * 1000;
 export const MAX_FILES = 50;

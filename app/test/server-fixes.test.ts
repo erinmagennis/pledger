@@ -163,7 +163,7 @@ describe("chart keys people by full address", () => {
     const line = [entry("p1", A2, 1000, 1000), entry("p2", A1x, 500, 500)];
     // A2 overpays $30 on a $10 fee on day 1; A1x pays $5 on day 2.
     const pays = [pay(A2, "30000000", "2026-10-10T10:00:00Z", "0x1"), pay(A1x, "5000000", "2026-10-11T10:00:00Z", "0x2")];
-    expect(computeTotals(null, line, pays).series).toEqual([1000, 1500]);
+    expect(computeTotals(null, line, pays).series).toEqual([0, 1000, 1500]);
     expect(A1).not.toBe(A2);
   });
 

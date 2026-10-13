@@ -32,7 +32,12 @@ export function Tracker({ totals, renderedAt }: { totals: Totals; renderedAt: nu
           <span className="k">{totals.peopleCount} {totals.peopleCount === 1 ? "person" : "people"} in line</span>
         </div>
       )}
-      {!totals.flat && <Sparkline series={totals.series} />}
+      {!totals.flat && (
+        <figure className="tchart">
+          <Sparkline series={totals.series} />
+          <figcaption>{totals.seriesDemo ? "Paid out over time (test money)" : "Paid out over time"}</figcaption>
+        </figure>
+      )}
       {totals.feed.length > 0 && (
         <ul className="tfeed" aria-label="Latest activity">
           {totals.feed.map((f) => (
