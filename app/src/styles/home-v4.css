@@ -10,9 +10,10 @@
 
 /* kinds beside the tracker: two rows; the match card takes the spare height so the column has no gap */
 .grid{align-items:stretch}
-.kinds{grid-template-rows:1fr auto}
+.kinds{grid-template-rows:auto 1fr}
 .k1{display:flex;flex-direction:column}
-.k1 .mini{margin-top:auto}
+.k1 .mini{margin-top:20px}
+.kinds > :not(.k1){display:flex;flex-direction:column;justify-content:center}
 
 /* how it works: a small inline "How?" toggle at the end of each step */
 .step{display:flex;flex-direction:column;align-items:flex-start}
