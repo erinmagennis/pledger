@@ -181,7 +181,22 @@ export function ClaimFlow() {
       <div className="card cl-step">
         <span className="k"><b>2</b>Emails</span>
         <h2>Add your Artizen emails</h2>
-        <p className="cl-soft">Your receipts (&ldquo;You collected&hellip;&rdquo;). If you backed your own project, add the &ldquo;You sold&hellip;&rdquo; email too.</p>
+        <ul className="cl4-emails">
+          <li>
+            <span className="chip cl-ok">Needed</span>
+            <div>
+              <b>Your receipt: &ldquo;You collected&hellip;&rdquo;</b>
+              <span>Proves you paid, and shows the project, date and 10% fee you can claim.</span>
+            </div>
+          </li>
+          <li>
+            <span className="chip cl-self">If you backed your own project</span>
+            <div>
+              <b>The sale email: &ldquo;You sold&hellip;&rdquo;</b>
+              <span>Shows the purchase was on your own project, so that claim goes to the front of the line.</span>
+            </div>
+          </li>
+        </ul>
         <label
           className={`cl-drop${dragOn ? " on" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setDragOn(true); }}
@@ -193,6 +208,13 @@ export function ClaimFlow() {
           <span className="cl-soft">or choose files. Nothing is saved until you sign.</span>
         </label>
         <EmailHelp />
+        <details className="cl-help">
+          <summary>What we keep</summary>
+          <p style={{ marginTop: 8 }}>
+            A fingerprint of each receipt, the project, date and fee, your wallet and how you want to be shown. Never
+            your email or its contents.
+          </p>
+        </details>
       </div>
 
       {rows && (
@@ -275,6 +297,45 @@ export function ClaimFlow() {
         </div>
       )}
       {error && !(rows && summary && summary.claimable > 0) && <p className="cl-error">{error}</p>}
+
+      <AfterStep n={rows && summary && summary.claimable > 0 ? 6 : rows ? 4 : 3} />
+    </div>
+  );
+}
+
+/** The last section: what happens once the claim is signed. Numbered after whatever steps are showing. */
+function AfterStep({ n }: { n: number }) {
+  return (
+    <div className="card cl-step cl4-after">
+      <span className="k"><b>{n}</b>After you sign</span>
+      <h2>What happens next</h2>
+      <ul className="cl4-next">
+        <li>
+          <span className="ico"><Icon name="list" /></span>
+          <div>
+            <b>You get a place in line</b>
+            <span>Self-backed claims go first, smallest first. Then everyone else. You can check your place anytime.</span>
+          </div>
+        </li>
+        <li>
+          <span className="ico"><Icon name="wallet" /></span>
+          <div>
+            <b>Payments come to your wallet</b>
+            <span>
+              In USDC on Base. If Erin wins at Colosseum, payouts start within 14 days of the prize arriving. Anyone
+              can also pay people in line directly.
+            </span>
+          </div>
+        </li>
+        <li>
+          <span className="ico"><Icon name="shield" /></span>
+          <div>
+            <b>Recorded on Base</b>
+            <span>Each checked claim gets a public record. Your row in the line links to it once it is written.</span>
+          </div>
+        </li>
+      </ul>
+      <Link className="cl4-line-link" href="/claim/line">See the line<Icon name="arrow" small /></Link>
     </div>
   );
 }
