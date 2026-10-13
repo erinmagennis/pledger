@@ -16,11 +16,9 @@ type Params = { slug: string };
 
 /** The Artizen give-back rule, one short line each. Shown once, in the header. */
 const GIVE_BACK_FACTS: [IconName, string, string][] = [
-  ["user", "Who pledges", "Erin Magennis"],
-  ["trophy", "What", "50% of her Colosseum winnings (prize not yet decided)"],
   ["heart", "Who gets it", "Season 7 backers who paid the 10% fee"],
-  ["list", "Order", "Self-backers first, then smallest claims"],
   ["coin", "When", "Within 14 days of the prize arriving, then weekly until used up"],
+  ["list", "Order", "Self-backers first, then smallest claims"],
 ];
 
 // Live line numbers for the give-back. Refreshed about every 30 seconds.
@@ -56,10 +54,7 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
             sub={
               <>
                 Artizen promised match funding on every purchase and charged backers a 10% endowment fee. In October
-                2026 it shut down. There is no sign the promised match will be paid or the fees returned.{" "}
-                <a className="gb4-src" href="https://payout-progress-artizen.pages.dev/" target="_blank" rel="noopener noreferrer">
-                  Source: Artizen Payout Tracker, run by the community (not Pledger)
-                </a>
+                2026 it shut down. There is no sign the promised match will be paid or the fees returned.
               </>
             }
             extra={
@@ -73,17 +68,22 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
                 ))}
               </ul>
             }
-            doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/pledges/artizen/claim" }]}
+            doors={[{ label: "Paid Artizen\u2019s 10% fee in Season 7?", action: "Claim your fee back", href: "/pledges/artizen/claim" }]}
           />
         </div>
         <BackersSection />
         <section className="gb-sec gb4-line" id="line" aria-labelledby="gb-line">
-          <SectionHead id="gb-line" title="The line" />
           {/* Wallet only here, for paying people in line. */}
           <WalletProvider>
             <LineWithPay initial={st} />
           </WalletProvider>
         </section>
+        <p className="gb4-src-foot">
+          Source for what happened:{" "}
+          <a href="https://payout-progress-artizen.pages.dev/" target="_blank" rel="noopener noreferrer">
+            Artizen Payout Tracker, run by the community (not Pledger)
+          </a>
+        </p>
         <ProofStrip pledge={pledge} />
       </>
     );

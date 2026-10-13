@@ -78,6 +78,10 @@ export function BackersSection() {
             <b>Erin Magennis</b>
             <span className="chip gb-pledged">Pledged</span>
           </div>
+          <dl className="gb4-pledge-facts">
+            <div><dt>Who pledges</dt><dd>Erin Magennis</dd></div>
+            <div><dt>What</dt><dd>50% of her Colosseum winnings (prize not yet decided)</dd></div>
+          </dl>
           {/* TODO(copy): placeholder note. Erin to replace with her own words. */}
           <div className="gb-note">
             <span className="gb-note-k">Why I&apos;m doing this</span>

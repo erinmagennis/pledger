@@ -339,7 +339,7 @@ const pledges: Pledge[] = [
   {
     slug: "artizen",
     kind: "give-back",
-    title: "Get your Artizen 10% back",
+    title: "Get your Artizen 10% fee back",
     by: { name: "Erin Magennis", initials: "EM" },
     chain: "Base",
     // Zeros until withLiveLine() merges the real line (also the fallback when the database is not connected).

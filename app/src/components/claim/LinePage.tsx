@@ -21,21 +21,18 @@ export function LineWithPay({ initial }: { initial?: LineStats }) {
   };
   return (
     <div className="pcol">
-      <div className="card linecard lc-strip">
+      <HelpPay lineVersion={version} onPaid={refresh} />
+      <div className="card linecard">
         <div className="lc-top">
-          <span className="k lc-live"><span className="live" />Live</span>
+          <h2 className="gb-h" id="gb-line">The line <span className="k lc-live"><span className="live" />Live</span></h2>
           <dl className="lc-stats">
             <div><dt>in line</dt><dd>{st.people}</dd></div>
             <div><dt>fees claimed</dt><dd>{formatCents(st.feesCents)}</dd></div>
             <div><dt>paid so far</dt><dd>{formatCents(st.paidCents)}</dd></div>
           </dl>
         </div>
-      </div>
-      <HelpPay lineVersion={version} onPaid={refresh} />
-      <div className="card">
-        <h2>Everyone in line</h2>
         <p className="cl-soft" style={{ marginTop: 6 }}>
-          Or pay one person: press Pay to send USDC on Base straight to them. Pledger checks the payment and updates the line.
+          Press Pay to send USDC on Base straight to one person. Pledger checks the payment and updates the line.
         </p>
         {offline && loaded && !line.length ? <p className="cl-empty">The line is not live yet.</p> : (
           <LineList entries={line} loaded={loaded} renderAction={(e) => <PayPanel entry={e} owedCents={owedBy(e.pid)} onPaid={refresh} />} />

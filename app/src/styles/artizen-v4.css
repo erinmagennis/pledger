@@ -71,3 +71,10 @@
 .zc-next-alt{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:15px;font-weight:600;color:var(--accent);text-decoration:none}
 .zc-next-alt:hover{text-decoration:underline}
 .cl-row .btn svg{margin-right:8px;vertical-align:-2px}
+.gb4-pledge-facts{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:14px 0 4px;font-size:15px}
+.gb4-pledge-facts dt{color:var(--faint);font-size:13px}
+.gb4-pledge-facts dd{margin:0}
+.gb4-pledge-facts div{display:contents}
+.gb4-src-foot{font-size:13px;color:var(--faint);margin:24px 0 8px}
+.gb4-src-foot a{color:inherit;text-decoration:underline}
+.gb4-line .lc-top h2{display:flex;align-items:center;gap:12px;margin:0}
