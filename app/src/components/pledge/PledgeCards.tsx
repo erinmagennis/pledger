@@ -66,44 +66,21 @@ export function SectionHead({ id, title }: { id: string; title: string }) {
   return <h2 id={id} className="gb-h">{title}</h2>;
 }
 
-/** Who's backing it: Erin's funder card with her note, and a compact card to help. The numbers live in the line section. */
-export function BackersSection() {
+/** Erin's funder card: the Pledged tag and her note. The rest of "Who's backing it" is on the line component. */
+export function FunderCard() {
   return (
-    <section className="gb-sec" aria-labelledby="gb-backers">
-      <SectionHead id="gb-backers" title="Who's backing it" />
-      <div className="gb4-back">
-        <article className="card gb-funder gb4-funder">
-          <div className="gb-person">
-            <span className="av tone-matching">EM</span>
-            <b>Erin Magennis</b>
-            <span className="chip gb-pledged">Pledged</span>
-          </div>
-          <dl className="gb4-pledge-facts">
-            <div><dt>Who pledges</dt><dd>Erin Magennis</dd></div>
-            <div><dt>What</dt><dd>50% of her Colosseum winnings (prize not yet decided)</dd></div>
-          </dl>
-          {/* TODO(copy): placeholder note. Erin to replace with her own words. */}
-          <div className="gb-note">
-            <span className="gb-note-k">Why I&apos;m doing this</span>
-            <p>
-              I paid this fee on my own projects too. If I win at Colosseum, half of it goes to the
-              people in this line. Self-backers go first, since they paid the fee on their own work.
-            </p>
-            <p className="gb-sig">Erin</p>
-          </div>
-        </article>
-        <article className="gb-invite gb4-invite">
-          <div className="gb4-invite-top">
-            <span className="ico"><Icon name="plus" /></span>
-            <h3>Back it too</h3>
-          </div>
-          <p>Pay by card (Stripe, test mode for now) or with USDC on Base. The money goes straight to people in line.</p>
-          <div className="gb-invite-cta">
-            <Button href="/pledges/artizen#help" variant="ghost">Help pay people back</Button>
-          </div>
-        </article>
+    <article className="card gb-funder gb4-funder">
+      <span className="chip gb-pledged">Pledged</span>
+      {/* TODO(copy): Erin to confirm the wording of her note. */}
+      <div className="gb-note">
+        <span className="gb-note-k">Why I&apos;m doing this</span>
+        <p>
+          I paid this fee on my own projects too. If I win at Colosseum, half of my winnings go straight to
+          the people in this line.
+        </p>
+        <p className="gb-sig">Erin</p>
       </div>
-    </section>
+    </article>
   );
 }
 

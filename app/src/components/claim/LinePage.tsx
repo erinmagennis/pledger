@@ -1,7 +1,7 @@
 "use client";
 
 import "./claim.css";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { formatCents } from "@/lib/claims";
 import { lineStats, type LineStats } from "@/lib/pledges";
 import { HelpPay } from "./HelpPay";
@@ -9,7 +9,7 @@ import { LineList, useLine } from "./LineList";
 import { PayPanel } from "./PayPanel";
 
 /** The full line with paying. `initial` is the server's count, shown until the live line loads. */
-export function LineWithPay({ initial }: { initial?: LineStats }) {
+export function LineWithPay({ initial, funder }: { initial?: LineStats; funder?: ReactNode }) {
   const { line, loaded, offline, reload } = useLine();
   const st = loaded ? lineStats(line) : initial ?? { people: 0, feesCents: 0, paidCents: 0 };
   const [version, setVersion] = useState(0);
@@ -21,7 +21,21 @@ export function LineWithPay({ initial }: { initial?: LineStats }) {
   };
   return (
     <div className="pcol">
-      <HelpPay lineVersion={version} onPaid={refresh} />
+      <section className="gb-sec" aria-labelledby="gb-backers">
+        <h2 id="gb-backers" className="gb-h">Who&apos;s backing it</h2>
+        <div className="gb4-split">
+          {funder}
+          <div className="card gb4-backit">
+            <h3>Back it too</h3>
+            <ol className="gb4-steps">
+              <li>Pick an amount, or how many people to pay.</li>
+              <li>Pay with USDC on Base from your wallet.</li>
+              <li>It goes straight to the next people in line, in order.</li>
+            </ol>
+            <HelpPay lineVersion={version} onPaid={refresh} />
+          </div>
+        </div>
+      </section>
       <div className="card linecard">
         <div className="lc-top">
           <h2 className="gb-h" id="gb-line">The line <span className="k lc-live"><span className="live" />Live</span></h2>

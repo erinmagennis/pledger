@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Icon, type IconName } from "@/components/Icons";
 import { Button } from "@/components/Button";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
-import { ActivityCard, BackersSection, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
+import { ActivityCard, FunderCard, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
 import { LineWithPay } from "@/components/claim/LinePage";
 import { WalletProvider } from "@/components/providers/WagmiProvider";
 import { ZcashVerify } from "@/components/pledge/ZcashVerify";
@@ -71,11 +71,10 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
             doors={[{ label: "Paid Artizen\u2019s 10% fee in Season 7?", action: "Claim your fee back", href: "/pledges/artizen/claim" }]}
           />
         </div>
-        <BackersSection />
         <section className="gb-sec gb4-line" id="line" aria-labelledby="gb-line">
           {/* Wallet only here, for paying people in line. */}
           <WalletProvider>
-            <LineWithPay initial={st} />
+            <LineWithPay initial={st} funder={<FunderCard />} />
           </WalletProvider>
         </section>
         <p className="gb4-src-foot">

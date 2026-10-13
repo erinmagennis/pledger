@@ -78,3 +78,14 @@
 .gb4-src-foot{font-size:13px;color:var(--faint);margin:24px 0 8px}
 .gb4-src-foot a{color:inherit;text-decoration:underline}
 .gb4-line .lc-top h2{display:flex;align-items:center;gap:12px;margin:0}
+.gb4-facts{grid-template-columns:repeat(3,minmax(0,1fr));max-width:none}
+.gb4-facts li:last-child:nth-child(odd){grid-column:auto}
+@media (max-width:760px){.gb4-facts{grid-template-columns:1fr}}
+.gb4-split{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+@media (max-width:860px){.gb4-split{grid-template-columns:1fr}}
+.gb4-funder .gb-pledged{align-self:flex-start}
+.gb4-funder{display:flex;flex-direction:column;gap:14px}
+.gb4-backit h3{margin:0 0 10px}
+.gb4-steps{margin:0 0 14px;padding-left:20px;display:grid;gap:4px;font-size:15px}
+.gb4-backit .cl-help-card{box-shadow:none;border:0;padding:0;margin:0;background:none}
+.gb4-backit .cl-help-card > h2,.gb4-backit .cl-help-card > h2 + p{display:none}
