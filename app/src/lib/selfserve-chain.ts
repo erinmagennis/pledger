@@ -89,7 +89,7 @@ export async function deployAndFund(
     bytecode: MATCH_POOL_BYTECODE,
     args: [ALPHA, account.address, recipient, BigInt(ratioToBps(input.ratio)), toUnits(input.capUsd), BigInt(input.lockUntil), input.name],
   });
-  const deployTx = await c.sendTransaction({ data, gas: 6_000_000n, feeToken: ALPHA, validBefore: validBefore() });
+  const deployTx = await c.sendTransaction({ data, gas: 9_000_000n, feeToken: ALPHA, validBefore: validBefore() });
   const dr = await c.waitForTransactionReceipt({ hash: deployTx });
   if (dr.status !== "success" || !dr.contractAddress) throw new Error("The pool contract did not deploy on Tempo.");
   const address = dr.contractAddress;
