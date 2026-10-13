@@ -152,7 +152,7 @@ export function ClaimFlow() {
       <div className="card cl-step">
         <span className="k"><b>1</b>Connect</span>
         <h2>Connect your wallet</h2>
-        <p className="cl-soft">Your payment goes here, in USDC on Base.</p>
+        <p className="cl-soft">This is where your payment is sent, in USDC on Base.</p>
         {isConnected && address ? (
           <div className="cl-row">
             <span className="cl-pill"><span className="live" />{shortAddress(address)}</span>
@@ -169,12 +169,17 @@ export function ClaimFlow() {
           <div className="cl-row">
             {connectors.map((c) => (
               <button key={c.uid} className="btn btn-ghost" disabled={connect.isPending} onClick={() => connect.mutate({ connector: c, chainId: base.id })}>
-                {c.id === "injected" ? "Browser wallet" : c.name}
+                <Icon name="wallet" small />{c.id === "injected" ? "Browser wallet" : c.name}
               </button>
             ))}
           </div>
         )}
-        {!isConnected && <p className="cl-soft">No wallet? Coinbase Wallet can create one.</p>}
+        {!isConnected && (
+          <p className="cl-soft">
+            Browser wallet works with MetaMask, Rabby, Rainbow and similar. WalletConnect shows a QR code for a phone wallet.
+            No wallet? Coinbase Wallet can create one.
+          </p>
+        )}
         {connect.error && <p className="cl-error">{connectError(connect.error)}</p>}
       </div>
 
@@ -182,8 +187,8 @@ export function ClaimFlow() {
         <span className="k"><b>2</b>Emails</span>
         <h2>Add your Artizen emails</h2>
         <ul className="cl4-emails">
-          <li><b>Needed:</b> your receipt, &ldquo;You collected&hellip;&rdquo;</li>
-          <li><b>Backed your own project?</b> Add the sale email, &ldquo;You sold&hellip;&rdquo;, to go first in line.</li>
+          <li><b>Needed:</b> your receipt, &ldquo;You collected&hellip;&rdquo;. It proves you paid and shows the fee you can claim.</li>
+          <li><b>Backed your own project?</b> Add the sale email, &ldquo;You sold&hellip;&rdquo;. It proves the purchase was on your own project, so that claim goes first in line.</li>
         </ul>
         <label
           className={`cl-drop${dragOn ? " on" : ""}`}

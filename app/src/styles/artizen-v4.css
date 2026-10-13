@@ -66,3 +66,4 @@
 .gb4-facts li{display:grid;grid-template-columns:120px 1fr;gap:12px}
 .gb4-facts li span{color:var(--soft);font-size:14px;font-weight:600}
 @media (max-width:560px){.gb4-facts li{grid-template-columns:1fr;gap:0}}
+.cl-row .btn svg{margin-right:8px;vertical-align:-2px}
