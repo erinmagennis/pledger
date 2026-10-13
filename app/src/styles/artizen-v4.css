@@ -1,0 +1,66 @@
+/* Artizen give-back page v4 + claim page v4 (2026-10-13). Tokens from tokens.css only. Prefixes gb4- and cl4-. */
+
+/* header: what happened lives in the description; the door is one row */
+.gb4-head .phead .psub{max-width:60ch;font-size:18px;line-height:1.55}
+.gb4-src{display:inline-block;font-size:14px;font-weight:600;color:var(--accent);white-space:nowrap}
+.gb4-for{display:block;margin-top:14px;color:var(--ink)}
+.gb4-head .doors{margin-top:28px}
+.gb4-head .door{flex-direction:row;align-items:center;gap:16px;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 22px}
+.gb4-head .door-k{font-size:16px;color:var(--ink);line-height:1}
+
+/* how this pledge works: the page's one green band */
+.band.gb4-band{margin-top:28px;padding:48px 56px}
+.gb4-band h2{font-size:32px;position:relative;z-index:1}
+.gb4-steps{list-style:none;padding:0;margin-top:28px}
+.gb4-steps .step{display:flex;flex-direction:column}
+.gb4-steps .step h3{font-size:19px;font-weight:600;color:#fff;margin-top:6px;letter-spacing:-.01em}
+.gb4-steps .step p{font-size:16px;margin-top:6px}
+.gb4-band-link{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;margin-top:24px;font-size:14px;font-weight:600;color:var(--peach);text-decoration:none}
+.gb4-band-link:hover{text-decoration:underline}
+
+/* who's backing it: funder card + invite, then the rule as tiles */
+.gb4-back{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:stretch}
+.gb4-money{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}
+.gb4-tile{background:#fff;border-radius:var(--r-sm);box-shadow:var(--shadow-soft);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.gb4-tile small,.gb4-tile dt{font-size:13px;color:var(--soft)}
+.gb4-tile b{font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.gb4-tile dd{margin:0;font-size:15px;line-height:1.45;color:var(--ink)}
+.gb4-live{margin-top:10px;font-size:13px}
+.gb4-funder .gb-note{margin-top:20px}
+.gb4-invite p{color:var(--soft);margin-top:8px}
+.card.gb4-rule{margin-top:20px;padding:26px 30px}
+.gb4-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 0}
+.gb4-tiles .gb4-tile{background:var(--ground);box-shadow:none;border:1px solid var(--line)}
+.gb4-tiles .s2{grid-column:span 2}
+
+/* claim page: one column of numbered sections */
+.phead.cl-head .sub{max-width:52ch}
+.cl4-page{max-width:780px;margin:28px auto 0}
+.cl4-emails{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.cl4-emails li{display:grid;grid-template-columns:auto;gap:8px;background:var(--ground);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px}
+.cl4-emails .chip{justify-self:start}
+.cl4-emails b{display:block;font-weight:600;font-size:15.5px}
+.cl4-emails li span:not(.chip){display:block;color:var(--soft);font-size:14.5px;margin-top:2px}
+.cl4-next{list-style:none;padding:0;margin:0;display:grid;gap:18px}
+.cl4-next li{display:grid;grid-template-columns:40px 1fr;gap:14px;align-items:start}
+.cl4-next .ico{background:var(--sage-soft);color:var(--accent)}
+.cl4-next b{display:block;font-weight:600;font-size:16px;padding-top:2px}
+.cl4-next li span:not(.ico){display:block;color:var(--soft);font-size:15px;margin-top:2px}
+.cl4-line-link{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--accent);text-decoration:none;justify-self:start}
+.cl4-line-link:hover{text-decoration:underline}
+
+@media(max-width:900px){
+ .band.gb4-band{padding:32px 22px}
+ .gb4-band h2{font-size:26px}
+ .gb4-steps{grid-template-columns:1fr;gap:12px}
+ .gb4-back{grid-template-columns:1fr}
+ .gb4-money{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .gb4-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .card.gb4-rule{padding:22px}
+}
+@media(max-width:600px){
+ .gb4-head .phead .psub{font-size:17px}
+ .gb4-head .door{flex-direction:column;align-items:flex-start;gap:10px;border-radius:var(--r-md);padding:14px;width:100%}
+ .gb4-tiles{grid-template-columns:1fr}
+ .gb4-tiles .s2{grid-column:auto}
+}

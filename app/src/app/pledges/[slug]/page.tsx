@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icons";
 import { PledgeHeader } from "@/components/pledge/PledgeHeader";
-import { ActivityCard, BackersSection, ClaimSection, HowCard, InPlaceCard, ProofStrip, RuleCard, SectionHead } from "@/components/pledge/PledgeCards";
+import { ActivityCard, BackersSection, ClaimSection, HowBand, HowCard, InPlaceCard, ProofStrip, SectionHead } from "@/components/pledge/PledgeCards";
 import { LineCard } from "@/components/claim/LineCard";
 import { ZcashVerify } from "@/components/pledge/ZcashVerify";
 import { ZcashNetworkView } from "@/components/pledge/ZcashNetworkView";
@@ -38,15 +38,27 @@ export default async function PledgePage({ params }: { params: Promise<Params> }
     return (
       <>
         <Link className="back" href="/#live"><Icon name="arrow" small />All pledges</Link>
-        <PledgeHeader
-          pledge={pledge}
-          hideBy
-          sub="For people who paid Artizen's 10% endowment fee in Season 7. People who backed their own project go first."
-          doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/claim" }]}
-          float={{ icon: "shield", title: "Claims checked by email signature", sub: "Season 7 receipts" }}
-        />
-        <RuleCard stats={st} />
-        <BackersSection />
+        <div className="gb4-head">
+          <PledgeHeader
+            pledge={pledge}
+            hideBy
+            sub={
+              <>
+                Artizen promised match funding on every purchase and charged backers a 10% endowment fee. In October
+                2026 it shut down. There is no sign the promised match will be paid or the fees returned.{" "}
+                <a className="gb4-src" href="https://payout-progress-artizen.pages.dev/" target="_blank" rel="noopener noreferrer">
+                  Source: community payout tracker
+                </a>
+                <span className="gb4-for">
+                  This pledge puts half of my Colosseum winnings toward paying that fee back to Season 7 backers.
+                </span>
+              </>
+            }
+            doors={[{ label: "Paid the fee?", action: "Check or add your claim", href: "/claim" }]}
+          />
+        </div>
+        <HowBand />
+        <BackersSection stats={st} />
         <ClaimSection />
         <section className="gb-sec" aria-labelledby="gb-line">
           <SectionHead id="gb-line" title="The line" />

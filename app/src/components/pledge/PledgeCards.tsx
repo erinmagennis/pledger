@@ -66,61 +66,68 @@ export function SectionHead({ id, title }: { id: string; title: string }) {
   return <h2 id={id} className="gb-h">{title}</h2>;
 }
 
-/** The rule (set once) and the money in place (live), side by side. Artizen give-back page only. */
-export function RuleCard({ stats }: { stats: LineStats }) {
+/** Rule tiles: how wide each one is on the 4-column grid, so the rows end level. Same order as ARTIZEN_RULE.rows. */
+const RULE_SPAN = [1, 1, 2, 2, 2, 2, 2];
+
+const HOW: { title: string; text: string }[] = [
+  {
+    title: "I pledge, and anyone can help",
+    text: "Half of my Colosseum winnings go to this line. Anyone can also send money straight to people in line.",
+  },
+  {
+    title: "If I win, payouts start",
+    text: "Within 14 days of the prize arriving. Nothing is locked before then.",
+  },
+  {
+    title: "Money goes down the line",
+    text: "In line order: self-backers first, then smallest claims first.",
+  },
+];
+
+/** How this pledge works: a 1-2-3 band. Artizen give-back page only. */
+export function HowBand() {
   return (
-    <section className="gb-sec gb-rule-sec" aria-label="The rule and money in place">
-      <div className="card gb-rule">
-        <div className="gb-rule-col">
-          <span className="k">The rule</span>
-          <div className="mini gb-rule-rows">
-            {ARTIZEN_RULE.rows.map((r) => (
-              <div className="r" key={r.label}>
-                <span>{r.label}</span>
-                <span>{r.value}</span>
-              </div>
-            ))}
-          </div>
-          <p className="gb-rule-set">{ARTIZEN_RULE.setOn}</p>
-        </div>
-        <div className="gb-rule-col">
-          <span className="k"><span className="live" />Money in place</span>
-          <div className="mini">
-            {moneyRows(stats).map((r) => (
-              <div className="r" key={r.label}>
-                <span>{r.label}</span>
-                <span>{r.value}</span>
-              </div>
-            ))}
-          </div>
-          <p className="gb-rule-p">
-            Nothing is locked yet, because the prize has not been awarded. When a pledge is funded up front, it
-            looks like this:
-          </p>
-          <div className="gb-rule-cta">
-            <Button href="/pledges/test-match-pool" variant="ghost">See a locked pledge</Button>
-            <span className="chip demo">Test money</span>
-          </div>
-        </div>
-      </div>
+    <section className="band gb4-band" aria-labelledby="gb-how">
+      <h2 id="gb-how">How this pledge works</h2>
+      <ol className="steps gb4-steps">
+        {HOW.map((h, i) => (
+          <li className="step" key={h.title}>
+            <span className="n">{i + 1}</span>
+            <h3>{h.title}</h3>
+            <p>{h.text}</p>
+          </li>
+        ))}
+      </ol>
+      <a className="gb4-band-link" href="/pledges/test-match-pool">
+        See a pledge funded up front (test money)<Icon name="arrow" small />
+      </a>
     </section>
   );
 }
 
-/** Who's backing it: Erin's funder card with her note, and an open slot for anyone who wants to help. */
-export function BackersSection() {
+/** Who's backing it: Erin's funder card with live money tiles and her note, an open slot to help, then the rule as tiles. */
+export function BackersSection({ stats }: { stats: LineStats }) {
   return (
     <section className="gb-sec" aria-labelledby="gb-backers">
       <SectionHead id="gb-backers" title="Who's backing it" />
-      <div className="gb-two">
-        <article className="card gb-funder">
+      <div className="gb4-back">
+        <article className="card gb-funder gb4-funder">
           <div className="gb-person">
             <span className="av tone-matching">EM</span>
             <b>Erin Magennis</b>
             <span className="chip gb-pledged">Pledged</span>
           </div>
           <p className="gb-amount">50% of my Colosseum winnings</p>
-          <p className="gb-small">Pays out if I win. Payouts start within 14 days of the prize arriving.</p>
+          <p className="gb-small">Pays out if I win.</p>
+          <div className="gb4-money" aria-label="Money in place">
+            {moneyRows(stats).map((r) => (
+              <div className="gb4-tile" key={r.label}>
+                <small>{r.label}</small>
+                <b>{r.value}</b>
+              </div>
+            ))}
+          </div>
+          <span className="k gb4-live"><span className="live" />Live from the line</span>
           {/* TODO(copy): placeholder note. Erin to replace with her own words. */}
           <div className="gb-note">
             <span className="gb-note-k">Why I&apos;m doing this</span>
@@ -131,21 +138,9 @@ export function BackersSection() {
             <p className="gb-sig">Erin</p>
           </div>
         </article>
-        <article className="gb-invite">
+        <article className="gb-invite gb4-invite">
           <span className="ico"><Icon name="plus" /></span>
           <h3>Back it too</h3>
-          <div className="gb-happened">
-            <p className="gb-happened-k">What happened</p>
-            <p>
-              Artizen was a platform for backing creative, science and public goods projects. It promised
-              match funding on every purchase and charged backers a 10% endowment fee. In October 2026 it
-              abruptly shut down. There is no sign the promised match will be paid or the fees returned.
-            </p>
-            <p>Many creators backed their own projects and planned around that match. They lost both.</p>
-            <a className="gb-happened-link" href="https://payout-progress-artizen.pages.dev/" target="_blank" rel="noopener noreferrer">
-              See the community payout tracker
-            </a>
-          </div>
           <p>
             Send USDC (a US dollar stablecoin) on Base straight to the next people in line. Pledger checks each payment and updates
             the line. Pledger never holds the money.
@@ -154,6 +149,18 @@ export function BackersSection() {
             <Button href="/claim/line#help" variant="ghost">Help pay people back</Button>
           </div>
         </article>
+      </div>
+      <div className="card gb4-rule" aria-label="The rule">
+        <span className="k">The rule</span>
+        <dl className="gb4-tiles">
+          {ARTIZEN_RULE.rows.map((r, i) => (
+            <div className={`gb4-tile s${RULE_SPAN[i] ?? 2}`} key={r.label}>
+              <dt>{r.label}</dt>
+              <dd>{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="gb-rule-set">{ARTIZEN_RULE.setOn}</p>
       </div>
     </section>
   );
