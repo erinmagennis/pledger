@@ -10,11 +10,11 @@ export function SiteNav() {
       <div className="links">
         <Link href="/#live">Pledges</Link>
         <Link href="/#how">How it works</Link>
-        <Link href="/make">For funders</Link>
+        <Link href="/make">Make a pledge</Link>
       </div>
       <div className="navr">
         <NetSwitch />
-        <Button href="/make" size="sm">Make a pledge</Button>
+        <Button href="/pledges/test-match-pool#try" size="sm">Try the demo</Button>
       </div>
     </nav>
   );

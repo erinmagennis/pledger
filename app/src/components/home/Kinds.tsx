@@ -1,5 +1,4 @@
 import { Icon, type IconName } from "../Icons";
-import { PrivateFunder } from "./PrivateFunder";
 
 /** Icon beside the title and line, so the card does not stack three rows of head. */
 function Head({ icon, title, line }: { icon: IconName; title: string; line: string }) {
@@ -31,7 +30,6 @@ export function Kinds({ matched }: { matched: string | null }) {
       <div className="kind k3">
         <Head icon="undo" title="Give-backs" line="Return fees or winnings to the people who paid them." />
       </div>
-      <PrivateFunder />
     </div>
   );
 }

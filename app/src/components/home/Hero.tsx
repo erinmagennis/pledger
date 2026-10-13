@@ -16,8 +16,8 @@ export function Hero({ featured, pool }: { featured: Pledge; pool: PoolData | nu
         <h1>Pledges you can <em>trust</em>.</h1>
         <p className="sub">See the money behind every pledge, and know when it will land.</p>
         <div className="ctas">
-          <Button href="/make">Make a pledge</Button>
-          <Button href="/pledges/test-match-pool" variant="ghost">Try the demo</Button>
+          <Button href="/pledges/test-match-pool#try">Try the demo</Button>
+          <Button href="/pledges/artizen-give-back" variant="ghost">Get your Artizen 10% back</Button>
         </div>
       </div>
       <div className="stage">
